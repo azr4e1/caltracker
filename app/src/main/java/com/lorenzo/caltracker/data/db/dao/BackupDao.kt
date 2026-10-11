@@ -5,6 +5,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import com.lorenzo.caltracker.data.backup.Backup
+import com.lorenzo.caltracker.data.db.QUICK_ADD_UNIT_SQL
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
@@ -52,5 +53,9 @@ abstract class BackupDao {
         insertLogEntries(backup.logEntries)
         backup.profile?.let { insertProfile(it) }
         backup.goals?.let { insertGoals(it) }
+        if (backup.schemaVersion < 2) markQuickAdds()
     }
+
+    @Query(QUICK_ADD_UNIT_SQL)
+    protected abstract suspend fun markQuickAdds()
 }

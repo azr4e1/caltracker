@@ -13,14 +13,22 @@ import java.time.LocalTime
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 
-enum class EntryUnit { G, ML, SERVING }
+enum class EntryUnit {
+    G,
+    ML,
+    SERVING,
+
+    /** A quick add: calories and macros entered directly, not tied to a food. */
+    QUICK,
+}
 
 /**
  * One logged item at a given date and time.
  *
  * Nutrients are a snapshot of the totals for [amount] at the time of logging, so editing or
  * deleting a food/recipe later never changes past days. Changing the quantity scales the
- * snapshot linearly. A quick add has neither [foodId] nor [recipeId].
+ * snapshot linearly. A quick add uses [EntryUnit.QUICK]. [foodId] becomes null if the food is
+ * deleted later; the entry keeps its snapshot.
  */
 @Serializable
 @Entity(
@@ -56,5 +64,5 @@ data class LogEntry(
     val fat: Double,
     val createdAt: Long = System.currentTimeMillis(),
 ) {
-    val isQuickAdd: Boolean get() = foodId == null && recipeId == null
+    val isQuickAdd: Boolean get() = unit == EntryUnit.QUICK
 }

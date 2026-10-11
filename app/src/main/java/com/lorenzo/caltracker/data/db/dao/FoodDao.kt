@@ -13,11 +13,17 @@ interface FoodDao {
     @Query("SELECT * FROM foods WHERE id = :id")
     suspend fun getById(id: Long): Food?
 
+    @Query("SELECT * FROM foods WHERE id = :id")
+    fun observeById(id: Long): Flow<Food?>
+
     @Query("SELECT * FROM foods WHERE barcode = :barcode")
     suspend fun getByBarcode(barcode: String): Food?
 
     @Query("SELECT * FROM foods ORDER BY name COLLATE NOCASE")
     fun observeAll(): Flow<List<Food>>
+
+    @Query("SELECT * FROM foods ORDER BY name COLLATE NOCASE")
+    suspend fun getAll(): List<Food>
 
     @Query("SELECT * FROM foods WHERE name LIKE '%' || :query || '%' OR brand LIKE '%' || :query || '%' ORDER BY name COLLATE NOCASE")
     fun search(query: String): Flow<List<Food>>

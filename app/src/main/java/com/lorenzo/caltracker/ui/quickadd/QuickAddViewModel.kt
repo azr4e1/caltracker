@@ -41,7 +41,7 @@ class QuickAddViewModel(route: QuickAddRoute, private val logRepository: LogRepo
                     time = time,
                     name = name.trim().ifEmpty { "Quick add" },
                     amount = 1.0,
-                    unit = EntryUnit.SERVING,
+                    unit = EntryUnit.QUICK,
                     kcal = kcal.toDecimalOrNull()!!,
                     protein = p,
                     carbs = c,

@@ -8,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lorenzo.caltracker.data.backup.BackupRepository
 import com.lorenzo.caltracker.data.db.entity.Goals
+import com.lorenzo.caltracker.data.export.ExportRepository
 import com.lorenzo.caltracker.data.db.entity.Profile
 import com.lorenzo.caltracker.data.repository.SettingsRepository
 import com.lorenzo.caltracker.ui.appViewModelFactory
@@ -22,18 +23,26 @@ data class SettingsUiState(val profile: Profile? = null, val goals: Goals? = nul
 class SettingsViewModel(
     settingsRepository: SettingsRepository,
     private val backupRepository: BackupRepository,
+    private val exportRepository: ExportRepository,
 ) : ViewModel() {
     val uiState: StateFlow<SettingsUiState> =
         combine(settingsRepository.profile, settingsRepository.goals, ::SettingsUiState)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
 
-    /** One-off message to show in a snackbar (backup results). */
+    /** One-off message to show in a snackbar (backup and export results). */
     var message by mutableStateOf<String?>(null)
 
     fun exportBackup(uri: Uri) {
         viewModelScope.launch {
             message = runCatching { backupRepository.export(uri) }
                 .fold({ "Backup saved ($it entries)" }, { "Backup failed: ${it.message}" })
+        }
+    }
+
+    fun exportExcel(uri: Uri) {
+        viewModelScope.launch {
+            message = runCatching { exportRepository.exportExcel(uri) }
+                .fold({ "Excel file saved ($it entries)" }, { "Export failed: ${it.message}" })
         }
     }
 
@@ -45,6 +54,6 @@ class SettingsViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { SettingsViewModel(it.settingsRepository, it.backupRepository) }
+        val Factory = appViewModelFactory { SettingsViewModel(it.settingsRepository, it.backupRepository, it.exportRepository) }
     }
 }

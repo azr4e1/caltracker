@@ -22,11 +22,11 @@ import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lorenzo.caltracker.data.db.entity.BaseUnit
 import com.lorenzo.caltracker.ui.components.DecimalField
 import com.lorenzo.caltracker.ui.formatWhole
@@ -35,19 +35,18 @@ import kotlin.math.abs
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FoodEditorScreen(
-    onBack: () -> Unit,
-    onSaved: (Long) -> Unit,
-    viewModel: FoodEditorViewModel = viewModel(factory = FoodEditorViewModel.Factory),
-) {
+fun FoodEditorScreen(viewModel: FoodEditorViewModel, onBack: () -> Unit, onSaved: (Long) -> Unit) {
     val vm = viewModel
     val unit = if (vm.baseUnit == BaseUnit.ML) "ml" else "g"
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New food") },
+                title = { Text(if (vm.isEditing) "Edit food" else "New food") },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                },
+                actions = {
+                    TextButton(onClick = { vm.save(onSaved) }, enabled = vm.isValid) { Text("Save") }
                 },
             )
         },
@@ -56,6 +55,13 @@ fun FoodEditorScreen(
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (vm.isEditing) {
+                Text(
+                    "Changes apply to future entries. Entries already in your diary keep their values.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             OutlinedTextField(vm.name, { vm.name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
             OutlinedTextField(vm.brand, { vm.brand = it }, label = { Text("Brand (optional)") }, singleLine = true, modifier = Modifier.fillMaxWidth())
 
@@ -108,7 +114,7 @@ fun FoodEditorScreen(
             }
 
             Button(onClick = { vm.save(onSaved) }, enabled = vm.isValid, modifier = Modifier.fillMaxWidth()) {
-                Text("Save and log")
+                Text(if (vm.isEditing) "Save" else "Save and log")
             }
         }
     }

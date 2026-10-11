@@ -22,8 +22,12 @@ data class LogFoodRoute(val foodId: Long, val epochDay: Long)
 @Serializable
 data class QuickAddRoute(val epochDay: Long)
 
+/** Creates a food, then opens it for logging on [epochDay]. */
 @Serializable
 data class NewFoodRoute(val epochDay: Long)
+
+@Serializable
+data class EditFoodRoute(val foodId: Long)
 
 /** Profile and goals editor. [isSetup] shows it as the first-launch welcome screen. */
 @Serializable

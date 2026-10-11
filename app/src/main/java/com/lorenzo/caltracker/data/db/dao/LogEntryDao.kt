@@ -37,12 +37,22 @@ interface LogEntryDao {
     @Query("SELECT * FROM log_entries WHERE foodId = :foodId ORDER BY createdAt DESC LIMIT 1")
     suspend fun lastForFood(foodId: Long): LogEntry?
 
+    /** Every entry, oldest first; used for the Excel export. */
+    @Query("SELECT * FROM log_entries ORDER BY date, time, id")
+    suspend fun getAll(): List<LogEntry>
+
     @Insert
     suspend fun insert(entry: LogEntry): Long
+
+    @Insert
+    suspend fun insertAll(entries: List<LogEntry>)
 
     @Update
     suspend fun update(entry: LogEntry)
 
+    @Update
+    suspend fun updateAll(entries: List<LogEntry>)
+
     @Delete
-    suspend fun delete(entry: LogEntry)
+    suspend fun deleteAll(entries: List<LogEntry>)
 }

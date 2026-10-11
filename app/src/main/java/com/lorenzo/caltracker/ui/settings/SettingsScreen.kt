@@ -44,6 +44,8 @@ import com.lorenzo.caltracker.ui.profile.label
 import com.lorenzo.caltracker.ui.profile.title
 import java.time.LocalDate
 
+private const val XLSX_MIME = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
@@ -147,8 +149,11 @@ private fun BackupSection(vm: SettingsViewModel) {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         pendingRestore = uri
     }
+    val excelLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(XLSX_MIME)) { uri ->
+        uri?.let(vm::exportExcel)
+    }
 
-    Text("Backup", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+    Text("Your data", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
     Text(
         "Save everything to a file (e.g. on Google Drive) to move it to a new phone.",
         style = MaterialTheme.typography.bodySmall,
@@ -161,6 +166,14 @@ private fun BackupSection(vm: SettingsViewModel) {
         OutlinedButton(onClick = { importLauncher.launch(arrayOf("application/json", "application/octet-stream")) }, modifier = Modifier.weight(1f)) {
             Text("Restore")
         }
+    }
+    Text(
+        "Export your diary as a spreadsheet: every entry, daily totals and your foods.",
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    OutlinedButton(onClick = { excelLauncher.launch("caltracker-${LocalDate.now()}.xlsx") }, modifier = Modifier.fillMaxWidth()) {
+        Text("Export to Excel")
     }
 
     pendingRestore?.let { uri ->

@@ -10,11 +10,19 @@ import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.domain.GoalCalculator
 import com.lorenzo.caltracker.ui.appViewModelFactory
+import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.toDecimalOrNull
 import kotlinx.coroutines.launch
 
-/** Form for creating a food. Nutrient values are per 100 g (or 100 ml). */
-class FoodEditorViewModel(private val foodRepository: FoodRepository) : ViewModel() {
+/**
+ * Form for creating a food, or editing one when [foodId] is set.
+ * Nutrient values are per 100 g (or 100 ml).
+ */
+class FoodEditorViewModel(private val foodId: Long?, private val foodRepository: FoodRepository) : ViewModel() {
+    private var original: Food? = null
+
+    val isEditing: Boolean get() = foodId != null
+
     var name by mutableStateOf("")
     var brand by mutableStateOf("")
     var baseUnit by mutableStateOf(BaseUnit.G)
@@ -28,6 +36,28 @@ class FoodEditorViewModel(private val foodRepository: FoodRepository) : ViewMode
     var salt by mutableStateOf("")
     var servingName by mutableStateOf("")
     var servingSize by mutableStateOf("")
+
+    init {
+        if (foodId != null) {
+            viewModelScope.launch {
+                val f = foodRepository.get(foodId) ?: return@launch
+                original = f
+                name = f.name
+                brand = f.brand.orEmpty()
+                baseUnit = f.baseUnit
+                kcal = f.kcalPer100.formatAmount()
+                protein = f.proteinPer100.formatAmount()
+                carbs = f.carbsPer100.formatAmount()
+                fat = f.fatPer100.formatAmount()
+                fiber = f.fiberPer100?.formatAmount().orEmpty()
+                sugar = f.sugarPer100?.formatAmount().orEmpty()
+                saturatedFat = f.saturatedFatPer100?.formatAmount().orEmpty()
+                salt = f.saltPer100?.formatAmount().orEmpty()
+                servingName = f.servingName.orEmpty()
+                servingSize = f.servingSize?.formatAmount().orEmpty()
+            }
+        }
+    }
 
     private fun required(value: String) = value.toDecimalOrNull()?.takeIf { it >= 0 }
     private fun optional(value: String) = if (value.isBlank()) null else value.toDecimalOrNull()
@@ -52,7 +82,10 @@ class FoodEditorViewModel(private val foodRepository: FoodRepository) : ViewMode
 
     fun save(onSaved: (Long) -> Unit) {
         if (!isValid) return
-        val food = Food(
+        if (isEditing && original == null) return
+        // Editing keeps the id, barcode, source and creation time of the original.
+        val base = original ?: Food(name = "", kcalPer100 = 0.0, proteinPer100 = 0.0, carbsPer100 = 0.0, fatPer100 = 0.0)
+        val food = base.copy(
             name = name.trim(),
             brand = brand.trim().ifEmpty { null },
             baseUnit = baseUnit,
@@ -67,10 +100,17 @@ class FoodEditorViewModel(private val foodRepository: FoodRepository) : ViewMode
             servingName = servingName.trim().ifEmpty { null }?.takeIf { servingSize.isNotBlank() },
             servingSize = optional(servingSize),
         )
-        viewModelScope.launch { onSaved(foodRepository.add(food)) }
+        viewModelScope.launch {
+            if (isEditing) {
+                foodRepository.update(food)
+                onSaved(food.id)
+            } else {
+                onSaved(foodRepository.add(food))
+            }
+        }
     }
 
     companion object {
-        val Factory = appViewModelFactory { FoodEditorViewModel(it.foodRepository) }
+        fun factory(foodId: Long?) = appViewModelFactory { FoodEditorViewModel(foodId, it.foodRepository) }
     }
 }

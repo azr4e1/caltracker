@@ -22,6 +22,7 @@ fun EntryUnit.label(amount: Double): String = when (this) {
     EntryUnit.G -> "g"
     EntryUnit.ML -> "ml"
     EntryUnit.SERVING -> if (amount == 1.0) "serving" else "servings"
+    EntryUnit.QUICK -> ""
 }
 
 /** Parses user input, accepting both "1.5" and "1,5". */

@@ -39,6 +39,9 @@ fun EditEntryDialog(
     onDismiss: () -> Unit,
     onSaveAmount: (Double, LocalTime) -> Unit,
     onSaveQuickAdd: (String, Nutrients, LocalTime) -> Unit,
+    onDuplicate: () -> Unit,
+    onCopyTo: () -> Unit,
+    onMoveTo: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var time by remember { mutableStateOf(entry.time) }
@@ -88,10 +91,15 @@ fun EditEntryDialog(
                     }
                 }
                 TimeField(time, { time = it }, Modifier.fillMaxWidth())
-                TextButton(
-                    onClick = onDelete,
-                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                ) { Text("Delete entry") }
+                Column {
+                    TextButton(onClick = onDuplicate) { Text("Duplicate") }
+                    TextButton(onClick = onCopyTo) { Text("Copy to another day…") }
+                    TextButton(onClick = onMoveTo) { Text("Move to another day…") }
+                    TextButton(
+                        onClick = onDelete,
+                        colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                    ) { Text("Delete entry") }
+                }
             }
         },
         confirmButton = {

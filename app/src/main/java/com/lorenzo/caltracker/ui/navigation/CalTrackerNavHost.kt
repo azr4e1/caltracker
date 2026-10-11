@@ -1,8 +1,6 @@
 package com.lorenzo.caltracker.ui.navigation
 
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
@@ -15,7 +13,6 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,6 +26,8 @@ import androidx.navigation.toRoute
 import com.lorenzo.caltracker.ui.addfood.AddFoodScreen
 import com.lorenzo.caltracker.ui.diary.DiaryScreen
 import com.lorenzo.caltracker.ui.foodeditor.FoodEditorScreen
+import com.lorenzo.caltracker.ui.foodeditor.FoodEditorViewModel
+import com.lorenzo.caltracker.ui.history.HistoryScreen
 import com.lorenzo.caltracker.ui.logfood.LogFoodScreen
 import com.lorenzo.caltracker.ui.logfood.LogFoodViewModel
 import com.lorenzo.caltracker.ui.profile.ProfileEditorScreen
@@ -59,13 +58,7 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                     Tab.entries.forEach { tab ->
                         NavigationBarItem(
                             selected = tab == currentTab,
-                            onClick = {
-                                navController.navigate(tab.route) {
-                                    popUpTo<DiaryRoute> { saveState = true }
-                                    launchSingleTop = true
-                                    restoreState = true
-                                }
-                            },
+                            onClick = { navController.navigateToTab(tab.route) },
                             icon = { Icon(tab.icon, contentDescription = null) },
                             label = { Text(tab.label) },
                         )
@@ -82,9 +75,17 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
             composable<DiaryRoute> {
                 DiaryScreen(onAddFood = { date -> navController.navigate(AddFoodRoute(date.toEpochDay())) })
             }
-            composable<HistoryRoute> { Placeholder("History: coming in Phase 2") }
+            composable<HistoryRoute> { HistoryScreen(onOpenDay = { navController.navigateToTab(DiaryRoute) }) }
             composable<SettingsRoute> {
                 SettingsScreen(onEditProfile = { navController.navigate(ProfileEditorRoute()) })
+            }
+            composable<EditFoodRoute> { entry ->
+                val route = entry.toRoute<EditFoodRoute>()
+                FoodEditorScreen(
+                    viewModel = viewModel(factory = FoodEditorViewModel.factory(route.foodId)),
+                    onBack = navController::popBackStack,
+                    onSaved = { navController.popBackStack() },
+                )
             }
             composable<ProfileEditorRoute> { entry ->
                 val route = entry.toRoute<ProfileEditorRoute>()
@@ -115,6 +116,7 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                     viewModel = viewModel(factory = LogFoodViewModel.factory(route)),
                     onBack = navController::popBackStack,
                     onSaved = navController::backToDiary,
+                    onEdit = { foodId -> navController.navigate(EditFoodRoute(foodId)) },
                 )
             }
             composable<QuickAddRoute> { entry ->
@@ -128,6 +130,7 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
             composable<NewFoodRoute> { entry ->
                 val route = entry.toRoute<NewFoodRoute>()
                 FoodEditorScreen(
+                    viewModel = viewModel(factory = FoodEditorViewModel.factory(foodId = null)),
                     onBack = navController::popBackStack,
                     onSaved = { foodId ->
                         // Replace the editor with the log screen, so Back returns to the food list.
@@ -141,11 +144,15 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
     }
 }
 
-private fun NavHostController.backToDiary() {
-    popBackStack<DiaryRoute>(inclusive = false)
+/** Switches bottom-bar tab, keeping each tab's state. */
+private fun NavHostController.navigateToTab(route: Any) {
+    navigate(route) {
+        popUpTo<DiaryRoute> { saveState = true }
+        launchSingleTop = true
+        restoreState = true
+    }
 }
 
-@Composable
-private fun Placeholder(text: String) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(text) }
+private fun NavHostController.backToDiary() {
+    popBackStack<DiaryRoute>(inclusive = false)
 }

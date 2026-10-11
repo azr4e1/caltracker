@@ -31,10 +31,12 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun backupDao(): BackupDao
 
     companion object {
-        const val VERSION = 1
+        const val VERSION = 2
 
 
         fun create(context: Context): AppDatabase =
-            Room.databaseBuilder(context, AppDatabase::class.java, "caltracker.db").build()
+            Room.databaseBuilder(context, AppDatabase::class.java, "caltracker.db")
+                .addMigrations(*ALL_MIGRATIONS)
+                .build()
     }
 }
