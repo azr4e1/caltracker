@@ -16,7 +16,10 @@ interface FoodDao {
     @Query("SELECT * FROM foods WHERE barcode = :barcode")
     suspend fun getByBarcode(barcode: String): Food?
 
-    @Query("SELECT * FROM foods WHERE name LIKE '%' || :query || '%' OR brand LIKE '%' || :query || '%' ORDER BY name")
+    @Query("SELECT * FROM foods ORDER BY name COLLATE NOCASE")
+    fun observeAll(): Flow<List<Food>>
+
+    @Query("SELECT * FROM foods WHERE name LIKE '%' || :query || '%' OR brand LIKE '%' || :query || '%' ORDER BY name COLLATE NOCASE")
     fun search(query: String): Flow<List<Food>>
 
     /** Foods ordered by when they were last logged, most recent first. */

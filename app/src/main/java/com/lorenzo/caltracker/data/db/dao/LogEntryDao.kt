@@ -19,7 +19,7 @@ data class DailyTotal(
 
 @Dao
 interface LogEntryDao {
-    @Query("SELECT * FROM log_entries WHERE date = :date ORDER BY position, id")
+    @Query("SELECT * FROM log_entries WHERE date = :date ORDER BY time, id")
     fun observeDay(date: LocalDate): Flow<List<LogEntry>>
 
     @Query(
@@ -33,11 +33,12 @@ interface LogEntryDao {
     )
     fun observeDailyTotals(from: LocalDate, to: LocalDate): Flow<List<DailyTotal>>
 
-    @Insert
-    suspend fun insert(entry: LogEntry): Long
+    /** The most recent time this food was logged; used to pre-fill the amount. */
+    @Query("SELECT * FROM log_entries WHERE foodId = :foodId ORDER BY createdAt DESC LIMIT 1")
+    suspend fun lastForFood(foodId: Long): LogEntry?
 
     @Insert
-    suspend fun insertAll(entries: List<LogEntry>)
+    suspend fun insert(entry: LogEntry): Long
 
     @Update
     suspend fun update(entry: LogEntry)

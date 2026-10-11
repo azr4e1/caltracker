@@ -2,7 +2,7 @@
   "formatVersion": 1,
   "database": {
     "version": 1,
-    "identityHash": "22ae57a964d179782e7c3a3faa42aa03",
+    "identityHash": "0c2e2df7a511265e14c097eea5aff1cb",
     "entities": [
       {
         "tableName": "foods",
@@ -271,7 +271,7 @@
       },
       {
         "tableName": "log_entries",
-        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` TEXT NOT NULL, `meal` TEXT NOT NULL, `position` INTEGER NOT NULL, `foodId` INTEGER, `recipeId` INTEGER, `name` TEXT NOT NULL, `amount` REAL NOT NULL, `unit` TEXT NOT NULL, `kcal` REAL NOT NULL, `protein` REAL NOT NULL, `carbs` REAL NOT NULL, `fat` REAL NOT NULL, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`foodId`) REFERENCES `foods`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , FOREIGN KEY(`recipeId`) REFERENCES `recipes`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` TEXT NOT NULL, `time` TEXT NOT NULL, `foodId` INTEGER, `recipeId` INTEGER, `name` TEXT NOT NULL, `amount` REAL NOT NULL, `unit` TEXT NOT NULL, `kcal` REAL NOT NULL, `protein` REAL NOT NULL, `carbs` REAL NOT NULL, `fat` REAL NOT NULL, `createdAt` INTEGER NOT NULL, FOREIGN KEY(`foodId`) REFERENCES `foods`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , FOREIGN KEY(`recipeId`) REFERENCES `recipes`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )",
         "fields": [
           {
             "fieldPath": "id",
@@ -286,15 +286,9 @@
             "notNull": true
           },
           {
-            "fieldPath": "meal",
-            "columnName": "meal",
+            "fieldPath": "time",
+            "columnName": "time",
             "affinity": "TEXT",
-            "notNull": true
-          },
-          {
-            "fieldPath": "position",
-            "columnName": "position",
-            "affinity": "INTEGER",
             "notNull": true
           },
           {
@@ -364,13 +358,14 @@
         },
         "indices": [
           {
-            "name": "index_log_entries_date",
+            "name": "index_log_entries_date_time",
             "unique": false,
             "columnNames": [
-              "date"
+              "date",
+              "time"
             ],
             "orders": [],
-            "createSql": "CREATE INDEX IF NOT EXISTS `index_log_entries_date` ON `${TABLE_NAME}` (`date`)"
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_log_entries_date_time` ON `${TABLE_NAME}` (`date`, `time`)"
           },
           {
             "name": "index_log_entries_foodId",
@@ -527,7 +522,7 @@
     ],
     "setupQueries": [
       "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
-      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '22ae57a964d179782e7c3a3faa42aa03')"
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, '0c2e2df7a511265e14c097eea5aff1cb')"
     ]
   }
 }

@@ -4,8 +4,10 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 /** A named group of foods. [servings] is how many portions the whole recipe yields. */
+@Serializable
 @Entity(tableName = "recipes")
 data class Recipe(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
@@ -15,6 +17,7 @@ data class Recipe(
     val updatedAt: Long = System.currentTimeMillis(),
 )
 
+@Serializable
 @Entity(
     tableName = "recipe_ingredients",
     foreignKeys = [

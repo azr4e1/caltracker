@@ -3,6 +3,7 @@ package com.lorenzo.caltracker.data.db.entity
 import androidx.room.Entity
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import kotlinx.serialization.Serializable
 
 enum class FoodSource { CUSTOM, OPEN_FOOD_FACTS, USDA }
 
@@ -13,6 +14,7 @@ enum class BaseUnit { G, ML }
  * A food with nutrients stored per 100 g / 100 ml.
  * A food can optionally define a named serving, e.g. "1 slice" = 30 g.
  */
+@Serializable
 @Entity(
     tableName = "foods",
     indices = [Index(value = ["barcode"], unique = true), Index(value = ["name"])],

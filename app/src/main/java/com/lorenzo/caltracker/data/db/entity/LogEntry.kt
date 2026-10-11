@@ -1,22 +1,28 @@
+@file:UseSerializers(LocalDateSerializer::class, LocalTimeSerializer::class)
+
 package com.lorenzo.caltracker.data.db.entity
 
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.lorenzo.caltracker.data.db.LocalDateSerializer
+import com.lorenzo.caltracker.data.db.LocalTimeSerializer
 import java.time.LocalDate
-
-enum class Meal { BREAKFAST, LUNCH, DINNER, SNACK }
+import java.time.LocalTime
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 
 enum class EntryUnit { G, ML, SERVING }
 
 /**
- * One logged item on a given day.
+ * One logged item at a given date and time.
  *
  * Nutrients are a snapshot of the totals for [amount] at the time of logging, so editing or
  * deleting a food/recipe later never changes past days. Changing the quantity scales the
  * snapshot linearly. A quick add has neither [foodId] nor [recipeId].
  */
+@Serializable
 @Entity(
     tableName = "log_entries",
     foreignKeys = [
@@ -33,13 +39,12 @@ enum class EntryUnit { G, ML, SERVING }
             onDelete = ForeignKey.SET_NULL,
         ),
     ],
-    indices = [Index("date"), Index("foodId"), Index("recipeId")],
+    indices = [Index("date", "time"), Index("foodId"), Index("recipeId")],
 )
 data class LogEntry(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val date: LocalDate,
-    val meal: Meal,
-    val position: Int = 0,
+    val time: LocalTime,
     val foodId: Long? = null,
     val recipeId: Long? = null,
     val name: String,
@@ -50,4 +55,6 @@ data class LogEntry(
     val carbs: Double,
     val fat: Double,
     val createdAt: Long = System.currentTimeMillis(),
-)
+) {
+    val isQuickAdd: Boolean get() = foodId == null && recipeId == null
+}

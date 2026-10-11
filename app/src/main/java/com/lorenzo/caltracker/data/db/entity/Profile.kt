@@ -1,7 +1,12 @@
+@file:UseSerializers(LocalDateSerializer::class)
+
 package com.lorenzo.caltracker.data.db.entity
 
 import androidx.room.Entity
 import androidx.room.PrimaryKey
+import com.lorenzo.caltracker.data.db.LocalDateSerializer
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
 import java.time.LocalDate
 
 enum class Sex { MALE, FEMALE }
@@ -15,6 +20,7 @@ enum class ActivityLevel(val multiplier: Double) {
 }
 
 /** Single-row table (id is always 1) with the body metrics used to calculate goals. */
+@Serializable
 @Entity(tableName = "profile")
 data class Profile(
     @PrimaryKey val id: Int = 1,
@@ -34,6 +40,7 @@ enum class GoalMode {
 }
 
 /** Single-row table (id is always 1) with the daily targets. */
+@Serializable
 @Entity(tableName = "goals")
 data class Goals(
     @PrimaryKey val id: Int = 1,
