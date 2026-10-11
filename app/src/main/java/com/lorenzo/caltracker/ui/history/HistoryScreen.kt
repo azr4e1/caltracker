@@ -26,6 +26,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -40,6 +41,9 @@ import com.lorenzo.caltracker.ui.formatWhole
 import com.lorenzo.caltracker.ui.theme.MacroColors
 import com.lorenzo.caltracker.ui.theme.macroColors
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+
+private val PERIOD_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +53,10 @@ fun HistoryScreen(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var selectedIndex by rememberSaveable(state.range) { mutableStateOf<Int?>(null) }
+    var visibleRange by remember(state.range) { mutableStateOf<IntRange?>(null) }
+    val visibleDays = visibleRange
+        ?.let { r -> state.days.slice(r.first.coerceAtLeast(0)..r.last.coerceAtMost(state.days.lastIndex)) }
+        ?: state.days.takeLast(state.range.days)
     val colors = macroColors()
     fun open(date: LocalDate) {
         viewModel.openInDiary(date)
@@ -73,17 +81,23 @@ fun HistoryScreen(
                     }
                     CalorieChart(
                         days = state.days,
+                        visibleCount = state.range.days,
                         goalKcal = state.goals?.kcal,
                         colors = colors,
                         selectedIndex = selectedIndex,
                         onSelect = { selectedIndex = it },
+                        onVisibleRangeChange = { range ->
+                            visibleRange = range
+                            // A selected day that scrolls off screen is deselected.
+                            if (selectedIndex?.let { it !in range } == true) selectedIndex = null
+                        },
                     )
-                    Legend(colors, showOther = state.days.any { it.otherKcal >= 1 })
+                    Legend(colors, showOther = visibleDays.any { it.otherKcal >= 1 })
                     val selected = selectedIndex?.let { state.days.getOrNull(it) }
                     if (selected != null) {
                         SelectedDayCard(selected, colors, onOpen = { open(selected.date) })
                     } else {
-                        SummaryCard(state)
+                        SummaryCard(visibleDays, state.goals?.kcal, canScroll = state.days.size > state.range.days)
                     }
                     Text(
                         "Logged days",
@@ -93,16 +107,17 @@ fun HistoryScreen(
                     )
                 }
             }
-            if (state.loggedDays.isEmpty()) {
+            val logged = visibleDays.filter { it.isLogged }
+            if (logged.isEmpty()) {
                 item {
                     Text(
-                        "Nothing logged in the last ${state.range.days} days.",
+                        "Nothing logged in this period.",
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(16.dp),
                     )
                 }
             }
-            items(state.loggedDays.reversed(), key = { it.date.toEpochDay() }) { day ->
+            items(logged.reversed(), key = { it.date.toEpochDay() }) { day ->
                 ListItem(
                     headlineContent = { Text(dateLabel(day.date)) },
                     supportingContent = {
@@ -134,25 +149,33 @@ private fun LegendItem(color: Color, label: String) {
     }
 }
 
+/** Averages over the days currently on screen. */
 @Composable
-private fun SummaryCard(state: HistoryUiState) {
+private fun SummaryCard(days: List<DayColumn>, goalKcal: Double?, canScroll: Boolean) {
+    val logged = days.filter { it.isLogged }
+    val average = logged.takeIf { it.isNotEmpty() }?.map { it.kcal }?.average()
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            val average = state.averageKcal
+            if (days.isNotEmpty()) {
+                Text(
+                    "${days.first().date.format(PERIOD_FORMAT)} – ${days.last().date.format(PERIOD_FORMAT)}",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Text(
-                if (average != null) "Average ${average.formatWhole()} kcal/day" else "No data yet",
+                if (average != null) "Average ${average.formatWhole()} kcal/day" else "Nothing logged",
                 style = MaterialTheme.typography.titleMedium,
             )
-            val goal = state.goals?.kcal
-            if (average != null && goal != null) {
-                val diff = average - goal
+            if (average != null && goalKcal != null) {
+                val diff = average - goalKcal
                 Text(
                     if (diff <= 0) "${(-diff).formatWhole()} kcal below goal on average" else "${diff.formatWhole()} kcal above goal on average",
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
             Text(
-                "${state.loggedDays.size} of ${state.days.size} days logged · tap a column for details",
+                "${logged.size} of ${days.size} days logged · tap a column for details" + if (canScroll) " · drag for earlier days" else "",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

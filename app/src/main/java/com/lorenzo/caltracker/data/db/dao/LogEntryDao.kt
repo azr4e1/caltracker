@@ -33,6 +33,10 @@ interface LogEntryDao {
     )
     fun observeDailyTotals(from: LocalDate, to: LocalDate): Flow<List<DailyTotal>>
 
+    /** Date of the first entry ever logged, or null if the diary is empty. */
+    @Query("SELECT MIN(date) FROM log_entries")
+    fun observeFirstDate(): Flow<LocalDate?>
+
     /** The most recent time this food was logged; used to pre-fill the amount. */
     @Query("SELECT * FROM log_entries WHERE foodId = :foodId ORDER BY createdAt DESC LIMIT 1")
     suspend fun lastForFood(foodId: Long): LogEntry?

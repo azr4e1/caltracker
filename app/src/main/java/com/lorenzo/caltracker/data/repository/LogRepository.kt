@@ -11,6 +11,8 @@ class LogRepository(private val dao: LogEntryDao) {
 
     fun observeDailyTotals(from: LocalDate, to: LocalDate): Flow<List<DailyTotal>> = dao.observeDailyTotals(from, to)
 
+    fun observeFirstDate(): Flow<LocalDate?> = dao.observeFirstDate()
+
     suspend fun getAll(): List<LogEntry> = dao.getAll()
 
     suspend fun lastForFood(foodId: Long): LogEntry? = dao.lastForFood(foodId)

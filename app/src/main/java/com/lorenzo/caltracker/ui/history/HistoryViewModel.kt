@@ -19,8 +19,10 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
+/** How many days the chart shows at once. Older days are reached by scrolling. */
 enum class HistoryRange(val days: Int, val label: String) {
     WEEK(7, "7 days"),
     MONTH(30, "30 days"),
@@ -52,13 +54,10 @@ data class DayColumn(
 
 data class HistoryUiState(
     val range: HistoryRange = HistoryRange.WEEK,
-    /** Every day in the range, oldest first, including days with nothing logged. */
+    /** Every day from the first logged day (or at least 90 days back) to today, oldest first. */
     val days: List<DayColumn> = emptyList(),
     val goals: Goals? = null,
-) {
-    val loggedDays: List<DayColumn> get() = days.filter { it.isLogged }
-    val averageKcal: Double? get() = loggedDays.takeIf { it.isNotEmpty() }?.map { it.kcal }?.average()
-}
+)
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
@@ -68,16 +67,14 @@ class HistoryViewModel(
 ) : ViewModel() {
     private val range = MutableStateFlow(HistoryRange.WEEK)
 
-    val uiState: StateFlow<HistoryUiState> = combine(
-        range,
-        range.flatMapLatest { r ->
-            val today = LocalDate.now()
-            logRepository.observeDailyTotals(today.minusDays(r.days - 1L), today)
-        },
-        settingsRepository.goals,
-    ) { r, totals, goals ->
-        HistoryUiState(range = r, days = fillDays(r, totals), goals = goals)
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
+    private val allDays = logRepository.observeFirstDate().flatMapLatest { first ->
+        val today = LocalDate.now()
+        val start = minOf(first ?: today, today.minusDays(HistoryRange.entries.maxOf { it.days } - 1L))
+        logRepository.observeDailyTotals(start, today).map { fillDays(start, today, it) }
+    }
+
+    val uiState: StateFlow<HistoryUiState> = combine(range, allDays, settingsRepository.goals, ::HistoryUiState)
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
     fun setRange(value: HistoryRange) {
         range.value = value
@@ -86,14 +83,12 @@ class HistoryViewModel(
     /** Selects [date] in the Diary; the screen then switches tabs. */
     fun openInDiary(date: LocalDate) = diaryDate.select(date)
 
-    private fun fillDays(range: HistoryRange, totals: List<DailyTotal>): List<DayColumn> {
+    private fun fillDays(start: LocalDate, end: LocalDate, totals: List<DailyTotal>): List<DayColumn> {
         val byDate = totals.associateBy { it.date }
-        val today = LocalDate.now()
-        return (range.days - 1 downTo 0).map { offset ->
-            val date = today.minusDays(offset.toLong())
+        return generateSequence(start) { it.plusDays(1) }.takeWhile { !it.isAfter(end) }.map { date ->
             val t = byDate[date]
             DayColumn(date, t?.kcal ?: 0.0, t?.protein ?: 0.0, t?.carbs ?: 0.0, t?.fat ?: 0.0)
-        }
+        }.toList()
     }
 
     companion object {
