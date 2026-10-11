@@ -32,6 +32,10 @@ data class NewFoodRoute(val epochDay: Long, val draftJson: String? = null)
 @Serializable
 data class EditFoodRoute(val foodId: Long)
 
-/** Profile and goals editor. [isSetup] shows it as the first-launch welcome screen. */
+enum class EditorSection { PROFILE, GOALS, BOTH }
+
+/**
+ * Profile and goals editor showing [section]. [isSetup] shows both as the first-launch welcome screen.
+ */
 @Serializable
-data class ProfileEditorRoute(val isSetup: Boolean = false)
+data class ProfileEditorRoute(val section: EditorSection = EditorSection.BOTH, val isSetup: Boolean = false)

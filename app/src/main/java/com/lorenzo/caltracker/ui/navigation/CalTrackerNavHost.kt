@@ -71,7 +71,7 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = if (needsSetup) ProfileEditorRoute(isSetup = true) else DiaryRoute,
+            startDestination = if (needsSetup) ProfileEditorRoute(EditorSection.BOTH, isSetup = true) else DiaryRoute,
             modifier = Modifier.padding(padding),
         ) {
             composable<DiaryRoute> {
@@ -79,7 +79,10 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
             }
             composable<HistoryRoute> { HistoryScreen(onOpenDay = { navController.navigateToTab(DiaryRoute) }) }
             composable<SettingsRoute> {
-                SettingsScreen(onEditProfile = { navController.navigate(ProfileEditorRoute()) })
+                SettingsScreen(
+                    onEditProfile = { navController.navigate(ProfileEditorRoute(EditorSection.PROFILE)) },
+                    onEditGoals = { navController.navigate(ProfileEditorRoute(EditorSection.GOALS)) },
+                )
             }
             composable<EditFoodRoute> { entry ->
                 val route = entry.toRoute<EditFoodRoute>()
@@ -92,6 +95,7 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
             composable<ProfileEditorRoute> { entry ->
                 val route = entry.toRoute<ProfileEditorRoute>()
                 ProfileEditorScreen(
+                    section = route.section,
                     isSetup = route.isSetup,
                     onClose = {
                         if (route.isSetup) {

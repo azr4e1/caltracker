@@ -12,10 +12,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -30,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -50,6 +53,7 @@ private const val XLSX_MIME = "application/vnd.openxmlformats-officedocument.spr
 @Composable
 fun SettingsScreen(
     onEditProfile: () -> Unit,
+    onEditGoals: () -> Unit,
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -70,19 +74,22 @@ fun SettingsScreen(
             Modifier.fillMaxSize().padding(padding).verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            ProfileCard(state.profile)
-            GoalsCard(state.goals, state.profile)
-            FilledTonalButton(onClick = onEditProfile, modifier = Modifier.fillMaxWidth()) { Text("Edit profile & goals") }
+            ProfileCard(state.profile, onClick = onEditProfile)
+            GoalsCard(state.goals, state.profile, onClick = onEditGoals)
             BackupSection(viewModel)
         }
     }
 }
 
+/** A tappable card of label/value rows; tapping opens its editor. */
 @Composable
-private fun SummaryCard(title: String, rows: List<Pair<String, String>>) {
-    Card(Modifier.fillMaxWidth()) {
+private fun SummaryCard(title: String, rows: List<Pair<String, String>>, onClick: () -> Unit) {
+    Card(onClick = onClick, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+                Icon(Icons.Filled.Edit, contentDescription = "Edit $title", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
             rows.forEach { (label, value) ->
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(label, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -94,9 +101,9 @@ private fun SummaryCard(title: String, rows: List<Pair<String, String>>) {
 }
 
 @Composable
-private fun ProfileCard(profile: Profile?) {
+private fun ProfileCard(profile: Profile?, onClick: () -> Unit) {
     if (profile == null) {
-        SummaryCard("Profile", listOf("Not set" to ""))
+        SummaryCard("Profile", listOf("Not set" to ""), onClick)
         return
     }
     SummaryCard(
@@ -110,13 +117,14 @@ private fun ProfileCard(profile: Profile?) {
             "BMR" to "${GoalCalculator.bmr(profile).formatWhole()} kcal",
             "Maintenance" to "${GoalCalculator.tdee(profile).formatWhole()} kcal",
         ),
+        onClick,
     )
 }
 
 @Composable
-private fun GoalsCard(goals: Goals?, profile: Profile?) {
+private fun GoalsCard(goals: Goals?, profile: Profile?, onClick: () -> Unit) {
     if (goals == null) {
-        SummaryCard("Daily goals", listOf("Not set" to ""))
+        SummaryCard("Daily goals", listOf("Not set" to ""), onClick)
         return
     }
     val method = when (goals.mode) {
@@ -137,6 +145,7 @@ private fun GoalsCard(goals: Goals?, profile: Profile?) {
             "Fat" to "${goals.fat.formatWhole()} g",
             "Method" to method,
         ),
+        onClick,
     )
 }
 

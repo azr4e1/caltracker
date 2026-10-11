@@ -52,16 +52,18 @@ import com.lorenzo.caltracker.domain.GoalCalculator
 import com.lorenzo.caltracker.ui.components.DateSelectDialog
 import com.lorenzo.caltracker.ui.components.DecimalField
 import com.lorenzo.caltracker.ui.formatWhole
+import com.lorenzo.caltracker.ui.navigation.EditorSection
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
 /**
- * Edits profile and goals; Save stores both and closes the screen.
+ * Edits the profile, the goals, or both ([section]); Save stores them and closes the screen.
  * With [isSetup] it is the first-launch welcome screen: no back button, and a restore option.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileEditorScreen(
+    section: EditorSection,
     isSetup: Boolean,
     onClose: () -> Unit,
     viewModel: ProfileEditorViewModel = viewModel(factory = ProfileEditorViewModel.Factory),
@@ -82,7 +84,16 @@ fun ProfileEditorScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isSetup) "Welcome" else "Profile & goals") },
+                title = {
+                    Text(
+                        when {
+                            isSetup -> "Welcome"
+                            section == EditorSection.PROFILE -> "Profile"
+                            section == EditorSection.GOALS -> "Daily goals"
+                            else -> "Profile & goals"
+                        },
+                    )
+                },
                 navigationIcon = {
                     if (!isSetup) {
                         IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
@@ -100,9 +111,18 @@ fun ProfileEditorScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (isSetup) SetupIntro(vm, onRestored = onClose)
-            ProfileSection(vm)
-            HorizontalDivider()
-            GoalsSection(vm)
+            // The top bar already names a single section, so only the combined form needs headings.
+            val headings = section == EditorSection.BOTH
+            if (section != EditorSection.GOALS) ProfileSection(vm, headings)
+            if (headings) HorizontalDivider()
+            if (section != EditorSection.PROFILE) GoalsSection(vm, headings)
+            if (section == EditorSection.PROFILE && vm.mode == GoalMode.AUTO) {
+                Text(
+                    "Your macro goals are calculated from your weight, so they'll update when you save.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Button(onClick = { vm.save(onClose) }, enabled = vm.canSave, modifier = Modifier.fillMaxWidth()) {
                 Text(if (isSetup) "Get started" else "Save")
             }
@@ -113,7 +133,7 @@ fun ProfileEditorScreen(
         AlertDialog(
             onDismissRequest = { confirmDiscard = false },
             title = { Text("Discard changes?") },
-            text = { Text("Your changes to profile and goals haven't been saved.") },
+            text = { Text("Your changes haven't been saved.") },
             confirmButton = {
                 TextButton(onClick = {
                     confirmDiscard = false
@@ -160,10 +180,10 @@ private fun <T> Segmented(options: List<T>, selected: T, label: (T) -> String, o
 }
 
 @Composable
-private fun ProfileSection(vm: ProfileEditorViewModel) {
+private fun ProfileSection(vm: ProfileEditorViewModel, showTitle: Boolean) {
     var pickBirthDate by remember { mutableStateOf(false) }
 
-    SectionTitle("Profile")
+    if (showTitle) SectionTitle("Profile")
     Segmented(Sex.entries, vm.sex, { it.label }) { vm.sex = it }
     OutlinedButton(onClick = { pickBirthDate = true }, modifier = Modifier.fillMaxWidth()) {
         val birth = vm.birthDate
@@ -219,8 +239,8 @@ private fun ProfileSection(vm: ProfileEditorViewModel) {
 }
 
 @Composable
-private fun GoalsSection(vm: ProfileEditorViewModel) {
-    SectionTitle("Daily goals")
+private fun GoalsSection(vm: ProfileEditorViewModel, showTitle: Boolean) {
+    if (showTitle) SectionTitle("Daily goals")
     Segmented(GoalMode.entries, vm.mode, { if (it == GoalMode.AUTO) "Calculate macros" else "Set manually" }, vm::setGoalMode)
 
     DecimalField(vm.kcal, { vm.kcal = it }, "Calories", suffix = "kcal", modifier = Modifier.fillMaxWidth())
