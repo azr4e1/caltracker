@@ -1,6 +1,7 @@
 package com.lorenzo.caltracker.domain
 
 import com.lorenzo.caltracker.data.db.entity.ActivityLevel
+import com.lorenzo.caltracker.data.db.entity.Profile
 import com.lorenzo.caltracker.data.db.entity.Sex
 import com.lorenzo.caltracker.domain.Nutrients.Companion.KCAL_PER_G_CARBS
 import com.lorenzo.caltracker.domain.Nutrients.Companion.KCAL_PER_G_FAT
@@ -21,6 +22,10 @@ object GoalCalculator {
     /** Total daily energy expenditure: BMR scaled by activity level. */
     fun tdee(sex: Sex, ageYears: Int, heightCm: Double, weightKg: Double, activity: ActivityLevel): Double =
         bmr(sex, ageYears, heightCm, weightKg) * activity.multiplier
+
+    fun bmr(profile: Profile): Double = bmr(profile.sex, age(profile.birthDate), profile.heightCm, profile.weightKg)
+
+    fun tdee(profile: Profile): Double = bmr(profile) * profile.activityLevel.multiplier
 
     fun age(birthDate: LocalDate, today: LocalDate = LocalDate.now()): Int = Period.between(birthDate, today).years
 

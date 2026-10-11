@@ -24,3 +24,7 @@ data class QuickAddRoute(val epochDay: Long)
 
 @Serializable
 data class NewFoodRoute(val epochDay: Long)
+
+/** Profile and goals editor. [isSetup] shows it as the first-launch welcome screen. */
+@Serializable
+data class ProfileEditorRoute(val isSetup: Boolean = false)

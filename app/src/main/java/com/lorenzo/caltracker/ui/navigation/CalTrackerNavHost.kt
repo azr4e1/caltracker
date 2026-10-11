@@ -20,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -32,6 +31,7 @@ import com.lorenzo.caltracker.ui.diary.DiaryScreen
 import com.lorenzo.caltracker.ui.foodeditor.FoodEditorScreen
 import com.lorenzo.caltracker.ui.logfood.LogFoodScreen
 import com.lorenzo.caltracker.ui.logfood.LogFoodViewModel
+import com.lorenzo.caltracker.ui.profile.ProfileEditorScreen
 import com.lorenzo.caltracker.ui.quickadd.QuickAddScreen
 import com.lorenzo.caltracker.ui.quickadd.QuickAddViewModel
 import com.lorenzo.caltracker.ui.settings.SettingsScreen
@@ -44,7 +44,7 @@ private enum class Tab(val route: Any, val routeClass: KClass<*>, val label: Str
 }
 
 @Composable
-fun CalTrackerNavHost() {
+fun CalTrackerNavHost(needsSetup: Boolean) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val destination = backStackEntry?.destination
@@ -61,7 +61,7 @@ fun CalTrackerNavHost() {
                             selected = tab == currentTab,
                             onClick = {
                                 navController.navigate(tab.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                                    popUpTo<DiaryRoute> { saveState = true }
                                     launchSingleTop = true
                                     restoreState = true
                                 }
@@ -76,14 +76,29 @@ fun CalTrackerNavHost() {
     ) { padding ->
         NavHost(
             navController = navController,
-            startDestination = DiaryRoute,
+            startDestination = if (needsSetup) ProfileEditorRoute(isSetup = true) else DiaryRoute,
             modifier = Modifier.padding(padding),
         ) {
             composable<DiaryRoute> {
                 DiaryScreen(onAddFood = { date -> navController.navigate(AddFoodRoute(date.toEpochDay())) })
             }
             composable<HistoryRoute> { Placeholder("History: coming in Phase 2") }
-            composable<SettingsRoute> { SettingsScreen() }
+            composable<SettingsRoute> {
+                SettingsScreen(onEditProfile = { navController.navigate(ProfileEditorRoute()) })
+            }
+            composable<ProfileEditorRoute> { entry ->
+                val route = entry.toRoute<ProfileEditorRoute>()
+                ProfileEditorScreen(
+                    isSetup = route.isSetup,
+                    onClose = {
+                        if (route.isSetup) {
+                            navController.navigate(DiaryRoute) { popUpTo<ProfileEditorRoute> { inclusive = true } }
+                        } else {
+                            navController.popBackStack()
+                        }
+                    },
+                )
+            }
 
             composable<AddFoodRoute> { entry ->
                 val route = entry.toRoute<AddFoodRoute>()
