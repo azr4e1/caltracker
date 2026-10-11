@@ -12,9 +12,11 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hasRoute
 import androidx.navigation.NavHostController
@@ -33,6 +35,10 @@ import com.lorenzo.caltracker.ui.logfood.LogFoodScreen
 import com.lorenzo.caltracker.ui.logfood.LogFoodViewModel
 import com.lorenzo.caltracker.ui.profile.ProfileEditorScreen
 import com.lorenzo.caltracker.ui.quickadd.QuickAddScreen
+import com.lorenzo.caltracker.ui.recipe.LogRecipeScreen
+import com.lorenzo.caltracker.ui.recipe.LogRecipeViewModel
+import com.lorenzo.caltracker.ui.recipe.RecipeEditorScreen
+import com.lorenzo.caltracker.ui.recipe.RecipeEditorViewModel
 import com.lorenzo.caltracker.ui.quickadd.QuickAddViewModel
 import com.lorenzo.caltracker.ui.settings.SettingsScreen
 import kotlin.reflect.KClass
@@ -84,6 +90,41 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                     onEditGoals = { navController.navigate(ProfileEditorRoute(EditorSection.GOALS)) },
                 )
             }
+            composable<RecipeEditorRoute> { entry ->
+                val route = entry.toRoute<RecipeEditorRoute>()
+                val viewModel: RecipeEditorViewModel = viewModel(factory = RecipeEditorViewModel.factory(route.recipeId))
+                // A food chosen in the picker comes back through this entry's saved state.
+                val picked by entry.savedStateHandle.getStateFlow<Long?>(PICKED_FOOD_ID, null).collectAsStateWithLifecycle()
+                LaunchedEffect(picked) {
+                    picked?.let {
+                        viewModel.onFoodPicked(it)
+                        entry.savedStateHandle[PICKED_FOOD_ID] = null
+                    }
+                }
+                RecipeEditorScreen(
+                    viewModel = viewModel,
+                    onAddIngredient = { navController.navigate(AddFoodRoute(route.epochDay, forRecipe = true)) },
+                    onBack = navController::popBackStack,
+                    onSaved = { recipeId ->
+                        if (route.recipeId == 0L) {
+                            navController.navigate(LogRecipeRoute(recipeId, route.epochDay)) {
+                                popUpTo<RecipeEditorRoute> { inclusive = true }
+                            }
+                        } else {
+                            navController.popBackStack()
+                        }
+                    },
+                )
+            }
+            composable<LogRecipeRoute> { entry ->
+                val route = entry.toRoute<LogRecipeRoute>()
+                LogRecipeScreen(
+                    viewModel = viewModel(factory = LogRecipeViewModel.factory(route)),
+                    onBack = navController::popBackStack,
+                    onSaved = navController::backToDiary,
+                    onEdit = { recipeId -> navController.navigate(RecipeEditorRoute(recipeId, route.epochDay)) },
+                )
+            }
             composable<EditFoodRoute> { entry ->
                 val route = entry.toRoute<EditFoodRoute>()
                 FoodEditorScreen(
@@ -110,13 +151,19 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
             composable<AddFoodRoute> { entry ->
                 val route = entry.toRoute<AddFoodRoute>()
                 AddFoodScreen(
+                    pickingIngredient = route.forRecipe,
                     onBack = navController::popBackStack,
-                    onFoodSelected = { foodId -> navController.navigate(LogFoodRoute(foodId, route.epochDay)) },
+                    onFoodSelected = { foodId ->
+                        if (route.forRecipe) navController.deliverPickedFood(foodId) else navController.navigate(LogFoodRoute(foodId, route.epochDay))
+                    },
                     onEditDraft = { draft ->
-                        navController.navigate(NewFoodRoute(route.epochDay, Json.encodeToString(RemoteFood.serializer(), draft)))
+                        val json = Json.encodeToString(RemoteFood.serializer(), draft)
+                        navController.navigate(NewFoodRoute(route.epochDay, json, forRecipe = route.forRecipe))
                     },
                     onQuickAdd = { navController.navigate(QuickAddRoute(route.epochDay)) },
-                    onNewFood = { navController.navigate(NewFoodRoute(route.epochDay)) },
+                    onNewFood = { navController.navigate(NewFoodRoute(route.epochDay, forRecipe = route.forRecipe)) },
+                    onRecipeSelected = { recipeId -> navController.navigate(LogRecipeRoute(recipeId, route.epochDay)) },
+                    onNewRecipe = { navController.navigate(RecipeEditorRoute(epochDay = route.epochDay)) },
                 )
             }
             composable<LogFoodRoute> { entry ->
@@ -143,15 +190,27 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                     viewModel = viewModel(factory = FoodEditorViewModel.factory(foodId = null, draft = draft)),
                     onBack = navController::popBackStack,
                     onSaved = { foodId ->
-                        // Replace the editor with the log screen, so Back returns to the food list.
-                        navController.navigate(LogFoodRoute(foodId, route.epochDay)) {
-                            popUpTo<NewFoodRoute> { inclusive = true }
+                        if (route.forRecipe) {
+                            navController.deliverPickedFood(foodId)
+                        } else {
+                            // Replace the editor with the log screen, so Back returns to the food list.
+                            navController.navigate(LogFoodRoute(foodId, route.epochDay)) {
+                                popUpTo<NewFoodRoute> { inclusive = true }
+                            }
                         }
                     },
                 )
             }
         }
     }
+}
+
+private const val PICKED_FOOD_ID = "pickedFoodId"
+
+/** Returns a food chosen as a recipe ingredient to the recipe editor, closing the picker screens. */
+private fun NavHostController.deliverPickedFood(foodId: Long) {
+    getBackStackEntry<RecipeEditorRoute>().savedStateHandle[PICKED_FOOD_ID] = foodId
+    popBackStack<RecipeEditorRoute>(inclusive = false)
 }
 
 /** Switches bottom-bar tab, keeping each tab's state. */

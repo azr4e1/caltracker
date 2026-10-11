@@ -51,19 +51,29 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.codescanner.GmsBarcodeScannerOptions
 import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
+import com.lorenzo.caltracker.data.db.dao.RecipeWithIngredients
 import com.lorenzo.caltracker.data.db.entity.BaseUnit
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.remote.RemoteFood
+import com.lorenzo.caltracker.domain.nutrition
+import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.formatWhole
 
+/**
+ * Finds a food to log: saved foods, recipes, online search, barcode scan.
+ * With [pickingIngredient] it picks a recipe ingredient instead: no quick add and no recipes.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddFoodScreen(
+    pickingIngredient: Boolean,
     onBack: () -> Unit,
     onFoodSelected: (Long) -> Unit,
     onEditDraft: (RemoteFood) -> Unit,
     onQuickAdd: () -> Unit,
     onNewFood: () -> Unit,
+    onRecipeSelected: (Long) -> Unit,
+    onNewRecipe: () -> Unit,
     viewModel: AddFoodViewModel = viewModel(factory = AddFoodViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -91,7 +101,7 @@ fun AddFoodScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Add food") },
+                title = { Text(if (pickingIngredient) "Add ingredient" else "Add food") },
                 navigationIcon = {
                     IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
                 },
@@ -120,15 +130,19 @@ fun AddFoodScreen(
                     enabled = !viewModel.busy,
                     modifier = Modifier.weight(1f),
                 ) { Text("Scan") }
-                FilledTonalButton(onClick = onQuickAdd, modifier = Modifier.weight(1f)) { Text("Quick add") }
+                if (!pickingIngredient) {
+                    FilledTonalButton(onClick = onQuickAdd, modifier = Modifier.weight(1f)) { Text("Quick add") }
+                }
                 FilledTonalButton(onClick = onNewFood, modifier = Modifier.weight(1f)) { Text("New food") }
             }
             LazyColumn(Modifier.fillMaxSize()) {
                 if (state.query.isNotBlank()) {
+                    if (!pickingIngredient && state.recipes.isNotEmpty()) recipeSection(state.recipes, onRecipeSelected, onNewRecipe)
                     savedFoodSection("Your foods", state.results, onFoodSelected, empty = "No saved food matches.")
                     onlineSection(state.query.trim(), viewModel.online, expandedSections, { expandedSections = expandedSections + it }, ::search) { viewModel.choose(it, handler) }
                 } else {
                     if (state.recent.isNotEmpty()) savedFoodSection("Recent", state.recent, onFoodSelected)
+                    if (!pickingIngredient) recipeSection(state.recipes, onRecipeSelected, onNewRecipe)
                     savedFoodSection(
                         "All foods", state.all, onFoodSelected,
                         empty = "No saved foods yet. Search, scan a barcode, or create one with \"New food\".",
@@ -168,6 +182,33 @@ private fun LazyListScope.message(key: String, text: String) {
 }
 
 private fun unitLabel(unit: BaseUnit) = if (unit == BaseUnit.ML) "ml" else "g"
+
+private fun LazyListScope.recipeSection(recipes: List<RecipeWithIngredients>, onClick: (Long) -> Unit, onNewRecipe: () -> Unit) {
+    item(key = "header-recipes") {
+        Row(
+            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text("Recipes", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
+            TextButton(onClick = onNewRecipe) { Text("New recipe") }
+        }
+    }
+    if (recipes.isEmpty()) message("empty-recipes", "Group foods you often eat together, e.g. your usual breakfast.")
+    items(recipes, key = { "recipe-${it.recipe.id}" }) { r ->
+        val n = r.nutrition
+        ListItem(
+            headlineContent = { Text(r.recipe.name) },
+            supportingContent = {
+                val portions = if (n.servings == 1.0) "portion" else "portions"
+                val ingredients = if (r.ingredients.size == 1) "ingredient" else "ingredients"
+                Text("${n.servings.formatAmount()} $portions · ${r.ingredients.size} $ingredients")
+            },
+            trailingContent = { Text("${n.perServing.kcal.formatWhole()} kcal / portion") },
+            modifier = Modifier.clickable { onClick(r.recipe.id) },
+        )
+    }
+}
 
 private fun LazyListScope.savedFoodSection(title: String, foods: List<Food>, onClick: (Long) -> Unit, empty: String? = null) {
     sectionHeader(title, title)

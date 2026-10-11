@@ -13,8 +13,9 @@ data object HistoryRoute
 @Serializable
 data object SettingsRoute
 
+/** Food picker. With [forRecipe] the chosen food is returned to the recipe editor instead of being logged. */
 @Serializable
-data class AddFoodRoute(val epochDay: Long)
+data class AddFoodRoute(val epochDay: Long, val forRecipe: Boolean = false)
 
 @Serializable
 data class LogFoodRoute(val foodId: Long, val epochDay: Long)
@@ -27,7 +28,7 @@ data class QuickAddRoute(val epochDay: Long)
  * [draftJson] optionally pre-fills the form with a JSON-encoded RemoteFood (scanned or searched).
  */
 @Serializable
-data class NewFoodRoute(val epochDay: Long, val draftJson: String? = null)
+data class NewFoodRoute(val epochDay: Long, val draftJson: String? = null, val forRecipe: Boolean = false)
 
 @Serializable
 data class EditFoodRoute(val foodId: Long)
@@ -39,3 +40,10 @@ enum class EditorSection { PROFILE, GOALS, BOTH }
  */
 @Serializable
 data class ProfileEditorRoute(val section: EditorSection = EditorSection.BOTH, val isSetup: Boolean = false)
+
+/** Creates a recipe ([recipeId] 0) or edits one. A new recipe is then opened for logging on [epochDay]. */
+@Serializable
+data class RecipeEditorRoute(val recipeId: Long = 0, val epochDay: Long)
+
+@Serializable
+data class LogRecipeRoute(val recipeId: Long, val epochDay: Long)

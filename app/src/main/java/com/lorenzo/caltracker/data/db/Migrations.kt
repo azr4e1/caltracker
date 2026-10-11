@@ -15,8 +15,15 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+/** 2 -> 3: recipes can store the weight of the finished dish. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE recipes ADD COLUMN totalWeight REAL")
+    }
+}
+
 /** Shared with backup restore, so old backups get the same fix. */
 const val QUICK_ADD_UNIT_SQL =
     "UPDATE log_entries SET unit = 'QUICK' WHERE foodId IS NULL AND recipeId IS NULL AND unit = 'SERVING'"
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)

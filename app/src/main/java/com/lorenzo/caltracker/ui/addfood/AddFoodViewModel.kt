@@ -5,11 +5,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lorenzo.caltracker.data.db.dao.RecipeWithIngredients
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.remote.RemoteFood
 import com.lorenzo.caltracker.data.repository.BarcodeResult
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.OnlineFoodRepository
+import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,6 +29,8 @@ data class AddFoodUiState(
     val recent: List<Food> = emptyList(),
     val all: List<Food> = emptyList(),
     val results: List<Food> = emptyList(),
+    /** All recipes, or the matching ones while searching. */
+    val recipes: List<RecipeWithIngredients> = emptyList(),
 )
 
 /** An online search for [query]. Each source's result is null while it is still loading. */
@@ -46,6 +50,7 @@ interface FoodChoiceHandler {
 @OptIn(ExperimentalCoroutinesApi::class)
 class AddFoodViewModel(
     foodRepository: FoodRepository,
+    recipeRepository: RecipeRepository,
     private val onlineFoods: OnlineFoodRepository,
 ) : ViewModel() {
     private val query = MutableStateFlow("")
@@ -54,13 +59,18 @@ class AddFoodViewModel(
         if (q.isBlank()) flowOf(emptyList()) else foodRepository.search(q)
     }
 
+    private val recipes = query.flatMapLatest { q ->
+        if (q.isBlank()) recipeRepository.observeAll() else recipeRepository.search(q)
+    }
+
     val uiState: StateFlow<AddFoodUiState> = combine(
         query.asStateFlow(),
         foodRepository.observeRecent(),
         foodRepository.observeAll(),
         results,
-    ) { q, recent, all, found ->
-        AddFoodUiState(query = q, recent = recent, all = all, results = found)
+        recipes,
+    ) { q, recent, all, found, recipeList ->
+        AddFoodUiState(query = q, recent = recent, all = all, results = found, recipes = recipeList)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AddFoodUiState())
 
     var online by mutableStateOf<OnlineSearch?>(null)
@@ -134,6 +144,6 @@ class AddFoodViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { AddFoodViewModel(it.foodRepository, it.onlineFoodRepository) }
+        val Factory = appViewModelFactory { AddFoodViewModel(it.foodRepository, it.recipeRepository, it.onlineFoodRepository) }
     }
 }

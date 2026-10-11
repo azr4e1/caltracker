@@ -31,7 +31,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun backupDao(): BackupDao
 
     companion object {
-        const val VERSION = 2
+        const val VERSION = 3
 
 
         fun create(context: Context): AppDatabase =

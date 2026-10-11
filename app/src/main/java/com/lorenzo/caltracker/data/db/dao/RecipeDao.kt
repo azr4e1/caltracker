@@ -9,6 +9,7 @@ import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.Update
 import com.lorenzo.caltracker.data.db.entity.Food
+import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Recipe
 import com.lorenzo.caltracker.data.db.entity.RecipeIngredient
 import kotlinx.coroutines.flow.Flow
@@ -28,12 +29,24 @@ data class RecipeWithIngredients(
 @Dao
 interface RecipeDao {
     @Transaction
-    @Query("SELECT * FROM recipes ORDER BY name")
+    @Query("SELECT * FROM recipes ORDER BY name COLLATE NOCASE")
     fun observeAll(): Flow<List<RecipeWithIngredients>>
+
+    @Transaction
+    @Query("SELECT * FROM recipes WHERE name LIKE '%' || :query || '%' ORDER BY name COLLATE NOCASE")
+    fun search(query: String): Flow<List<RecipeWithIngredients>>
 
     @Transaction
     @Query("SELECT * FROM recipes WHERE id = :id")
     suspend fun getById(id: Long): RecipeWithIngredients?
+
+    @Transaction
+    @Query("SELECT * FROM recipes WHERE id = :id")
+    fun observeById(id: Long): Flow<RecipeWithIngredients?>
+
+    @Transaction
+    @Query("SELECT * FROM recipes ORDER BY name COLLATE NOCASE")
+    suspend fun getAll(): List<RecipeWithIngredients>
 
     @Insert
     suspend fun insert(recipe: Recipe): Long
@@ -46,6 +59,9 @@ interface RecipeDao {
 
     @Insert
     suspend fun insertIngredients(ingredients: List<RecipeIngredient>)
+
+    @Query("SELECT * FROM log_entries WHERE recipeId = :recipeId ORDER BY createdAt DESC LIMIT 1")
+    suspend fun lastEntry(recipeId: Long): LogEntry?
 
     @Query("DELETE FROM recipe_ingredients WHERE recipeId = :recipeId")
     suspend fun deleteIngredients(recipeId: Long)

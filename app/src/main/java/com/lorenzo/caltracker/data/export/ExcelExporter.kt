@@ -1,27 +1,36 @@
 package com.lorenzo.caltracker.data.export
 
+import com.lorenzo.caltracker.data.db.dao.RecipeWithIngredients
 import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
+import com.lorenzo.caltracker.domain.nutrientsFor
 import java.io.OutputStream
 import org.dhatim.fastexcel.Workbook
 import org.dhatim.fastexcel.Worksheet
 
 /**
- * Writes the diary as an .xlsx workbook with three sheets: every entry, one row per day, and
- * the saved foods. Dates and times are real Excel values, so they sort and filter correctly.
+ * Writes the diary as an .xlsx workbook: every entry, one row per day, the saved foods, and the
+ * recipes (one row per ingredient). Dates and times are real Excel values, so they sort and filter correctly.
  */
 object ExcelExporter {
     private const val DATE_FORMAT = "yyyy-mm-dd"
     private const val TIME_FORMAT = "hh:mm"
     private const val NUMBER_FORMAT = "0.0"
 
-    fun write(output: OutputStream, entries: List<LogEntry>, foods: List<Food>, goals: Goals?) {
+    fun write(
+        output: OutputStream,
+        entries: List<LogEntry>,
+        foods: List<Food>,
+        recipes: List<RecipeWithIngredients>,
+        goals: Goals?,
+    ) {
         val workbook = Workbook(output, "CalTracker", "1.0")
         writeEntries(workbook.newWorksheet("Entries"), entries)
         writeDailyTotals(workbook.newWorksheet("Daily totals"), entries, goals)
         writeFoods(workbook.newWorksheet("Foods"), foods)
+        writeRecipes(workbook.newWorksheet("Recipes"), recipes)
         workbook.finish()
     }
 
@@ -38,7 +47,14 @@ object ExcelExporter {
                 ws.value(r, 4, e.unit.excelLabel)
             }
             numbers(ws, r, 5, e.kcal, e.protein, e.carbs, e.fat)
-            ws.value(r, 9, if (e.isQuickAdd) "Quick add" else "Food")
+            ws.value(
+                r, 9,
+                when {
+                    e.isQuickAdd -> "Quick add"
+                    e.recipeId != null -> "Recipe"
+                    else -> "Food"
+                },
+            )
         }
         widths(ws, 12, 8, 30, 9, 9, 9, 12, 11, 9, 11)
     }
@@ -74,6 +90,25 @@ object ExcelExporter {
             ws.value(r, 14, f.source.name.lowercase())
         }
         widths(ws, 30, 16, 15, 8, 8, 12, 11, 9, 10, 10, 12, 9, 12, 13, 10)
+    }
+
+    private fun writeRecipes(ws: Worksheet, recipes: List<RecipeWithIngredients>) {
+        header(ws, "Recipe", "Portions", "Cooked weight (g)", "Ingredient", "Amount", "Unit", "kcal", "Protein (g)", "Carbs (g)", "Fat (g)")
+        var r = 1
+        recipes.forEach { recipe ->
+            recipe.ingredients.sortedBy { it.ingredient.position }.forEach { (ingredient, food) ->
+                val n = food.nutrientsFor(ingredient.amount)
+                ws.value(r, 0, recipe.recipe.name)
+                ws.value(r, 1, recipe.recipe.servings)
+                recipe.recipe.totalWeight?.let { ws.value(r, 2, it) }
+                ws.value(r, 3, food.name)
+                ws.value(r, 4, ingredient.amount)
+                ws.value(r, 5, food.baseUnit.name.lowercase())
+                numbers(ws, r, 6, n.kcal, n.protein, n.carbs, n.fat)
+                r++
+            }
+        }
+        widths(ws, 24, 9, 16, 28, 9, 6, 8, 12, 11, 9)
     }
 
     private fun header(ws: Worksheet, vararg titles: String) {

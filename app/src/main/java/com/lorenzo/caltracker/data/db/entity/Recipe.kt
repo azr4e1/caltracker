@@ -6,13 +6,17 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
-/** A named group of foods. [servings] is how many portions the whole recipe yields. */
+/**
+ * A named group of foods. [servings] is how many portions the whole recipe yields.
+ * [totalWeight] is the weight of the finished dish (cooking changes it); null means "sum of ingredients".
+ */
 @Serializable
 @Entity(tableName = "recipes")
 data class Recipe(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val name: String,
     val servings: Double = 1.0,
+    val totalWeight: Double? = null,
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
 )

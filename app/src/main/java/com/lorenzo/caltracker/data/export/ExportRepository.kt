@@ -4,6 +4,7 @@ import android.content.Context
 import android.net.Uri
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.LogRepository
+import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
@@ -13,13 +14,14 @@ class ExportRepository(
     private val context: Context,
     private val logRepository: LogRepository,
     private val foodRepository: FoodRepository,
+    private val recipeRepository: RecipeRepository,
     private val settingsRepository: SettingsRepository,
 ) {
     /** Writes the Excel workbook to [uri]. Returns the number of entries exported. */
     suspend fun exportExcel(uri: Uri): Int = withContext(Dispatchers.IO) {
         val entries = logRepository.getAll()
         val output = context.contentResolver.openOutputStream(uri, "wt") ?: error("Cannot open file for writing")
-        output.use { ExcelExporter.write(it, entries, foodRepository.getAll(), settingsRepository.goals.first()) }
+        output.use { ExcelExporter.write(it, entries, foodRepository.getAll(), recipeRepository.getAll(), settingsRepository.goals.first()) }
         entries.size
     }
 }

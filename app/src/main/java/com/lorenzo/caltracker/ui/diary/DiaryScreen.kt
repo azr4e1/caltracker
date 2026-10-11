@@ -61,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.domain.Nutrients
@@ -426,5 +427,9 @@ private fun TimelineRow(
 
 private fun entryDetails(entry: LogEntry): String {
     val macros = "P ${entry.protein.formatWhole()} · C ${entry.carbs.formatWhole()} · F ${entry.fat.formatWhole()}"
-    return if (entry.isQuickAdd) "Quick add · $macros" else "${entry.amount.formatAmount()} ${entry.unit.label(entry.amount)} · $macros"
+    val unit = when {
+        entry.recipeId != null && entry.unit == EntryUnit.SERVING -> if (entry.amount == 1.0) "portion" else "portions"
+        else -> entry.unit.label(entry.amount)
+    }
+    return if (entry.isQuickAdd) "Quick add · $macros" else "${entry.amount.formatAmount()} $unit · $macros"
 }
