@@ -41,9 +41,9 @@ abstract class BackupDao {
     @Insert protected abstract suspend fun insertGoals(goals: Goals)
     @Insert protected abstract suspend fun insertWeightEntries(items: List<WeightEntry>)
 
-    /** Deletes everything and inserts the backup's rows, keeping their ids. All or nothing. */
+    /** Deletes every row in every table. All or nothing. */
     @Transaction
-    open suspend fun replaceAll(backup: Backup) {
+    open suspend fun deleteAll() {
         clearLogEntries()
         clearRecipeIngredients()
         clearRecipes()
@@ -51,6 +51,12 @@ abstract class BackupDao {
         clearProfile()
         clearGoals()
         clearWeightEntries()
+    }
+
+    /** Deletes everything and inserts the backup's rows, keeping their ids. All or nothing. */
+    @Transaction
+    open suspend fun replaceAll(backup: Backup) {
+        deleteAll()
 
         insertFoods(backup.foods)
         insertRecipes(backup.recipes)

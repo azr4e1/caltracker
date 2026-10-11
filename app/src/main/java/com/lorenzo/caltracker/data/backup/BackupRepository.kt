@@ -34,6 +34,9 @@ class BackupRepository(private val context: Context, private val database: AppDa
         backup.logEntries.size
     }
 
+    /** Permanently deletes all data: diary, foods, recipes, weigh-ins, profile and goals. */
+    suspend fun deleteAll() = withContext(Dispatchers.IO) { database.backupDao().deleteAll() }
+
     /** Replaces all data with the backup at [uri]. Returns the number of log entries restored. */
     suspend fun import(uri: Uri): Int = withContext(Dispatchers.IO) {
         val input = context.contentResolver.openInputStream(uri) ?: error("Cannot open file")

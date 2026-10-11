@@ -99,6 +99,12 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                 SettingsScreen(
                     onEditProfile = { navController.navigate(ProfileEditorRoute(EditorSection.PROFILE)) },
                     onEditGoals = { navController.navigate(ProfileEditorRoute(EditorSection.GOALS)) },
+                    onDataDeleted = {
+                        // Start over: the welcome screen becomes the only screen.
+                        navController.navigate(ProfileEditorRoute(EditorSection.BOTH, isSetup = true)) {
+                            popUpTo(navController.graph.id) { inclusive = true }
+                        }
+                    },
                 )
             }
             composable<RecipeEditorRoute> { entry ->

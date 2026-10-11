@@ -3,18 +3,22 @@ package com.lorenzo.caltracker.ui.settings
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -54,6 +58,7 @@ private const val XLSX_MIME = "application/vnd.openxmlformats-officedocument.spr
 fun SettingsScreen(
     onEditProfile: () -> Unit,
     onEditGoals: () -> Unit,
+    onDataDeleted: () -> Unit,
     viewModel: SettingsViewModel = viewModel(factory = SettingsViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -77,6 +82,7 @@ fun SettingsScreen(
             ProfileCard(state.profile, onClick = onEditProfile)
             GoalsCard(state.goals, state.profile, onClick = onEditGoals)
             BackupSection(viewModel)
+            DeleteDataSection(onDelete = { viewModel.deleteAllData(onDataDeleted) })
         }
     }
 }
@@ -177,7 +183,7 @@ private fun BackupSection(vm: SettingsViewModel) {
         }
     }
     Text(
-        "Export your diary as a spreadsheet: every entry, daily totals and your foods.",
+        "Export your diary as a spreadsheet: every entry, daily totals, foods, recipes and weigh-ins.",
         style = MaterialTheme.typography.bodySmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
@@ -197,6 +203,41 @@ private fun BackupSection(vm: SettingsViewModel) {
                 }) { Text("Replace everything") }
             },
             dismissButton = { TextButton(onClick = { pendingRestore = null }) { Text("Cancel") } },
+        )
+    }
+}
+
+@Composable
+private fun DeleteDataSection(onDelete: () -> Unit) {
+    var confirming by remember { mutableStateOf(false) }
+    Spacer(Modifier.height(16.dp))
+    OutlinedButton(
+        onClick = { confirming = true },
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.error),
+        modifier = Modifier.fillMaxWidth(),
+    ) { Text("Delete all data") }
+
+    if (confirming) {
+        AlertDialog(
+            onDismissRequest = { confirming = false },
+            title = { Text("Delete all data?") },
+            text = {
+                Text(
+                    "This permanently deletes your diary, foods, recipes, weigh-ins, profile and goals. " +
+                        "It can't be undone.\n\nTo keep a copy, cancel and use Export backup first.",
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        confirming = false
+                        onDelete()
+                    },
+                    colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
+                ) { Text("Delete everything") }
+            },
+            dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } },
         )
     }
 }

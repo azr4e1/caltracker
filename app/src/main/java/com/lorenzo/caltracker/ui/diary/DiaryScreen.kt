@@ -166,6 +166,7 @@ fun DiaryScreen(
                         IconButton(onClick = { deleteWithUndo(selectedEntries) }) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
                         OverflowMenu(
                             "Select all" to { viewModel.selectAll(currentEntries) },
+                            "Deselect all" to viewModel::clearSelection,
                             "Create recipe" to {
                                 val ids = selectedEntries.map { it.id }
                                 viewModel.clearSelection()

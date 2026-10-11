@@ -53,6 +53,13 @@ class SettingsViewModel(
         }
     }
 
+    fun deleteAllData(onDeleted: () -> Unit) {
+        viewModelScope.launch {
+            backupRepository.deleteAll()
+            onDeleted()
+        }
+    }
+
     companion object {
         val Factory = appViewModelFactory { SettingsViewModel(it.settingsRepository, it.backupRepository, it.exportRepository) }
     }
