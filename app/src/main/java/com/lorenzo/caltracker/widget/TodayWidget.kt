@@ -2,6 +2,8 @@ package com.lorenzo.caltracker.widget
 
 import android.content.Context
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -37,17 +39,41 @@ import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.domain.totalNutrients
 import com.lorenzo.caltracker.ui.formatWhole
+import java.time.Duration
 import java.time.LocalDate
+import java.time.LocalDateTime
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.map
 
 /** Home-screen widget: today's calories against the goal, and the three macros. Tap opens the app. */
+@OptIn(ExperimentalCoroutinesApi::class)
 class TodayWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val container = (context.applicationContext as CalTrackerApp).container
-        val totals = container.logRepository.observeDay(LocalDate.now()).first().totalNutrients()
-        val goals = container.settingsRepository.goals.first()
+        // The widget stays alive between updates, so it observes the data instead of reading it once.
+        val totalsFlow = today().flatMapLatest { container.logRepository.observeDay(it) }.map { it.totalNutrients() }
+        val goalsFlow = container.settingsRepository.goals
+        val initialTotals = totalsFlow.first()
+        val initialGoals = goalsFlow.first()
         provideContent {
+            val totals by totalsFlow.collectAsState(initialTotals)
+            val goals by goalsFlow.collectAsState(initialGoals)
             GlanceTheme { Content(totals, goals) }
+        }
+    }
+
+    /** The current date, emitting again just after each midnight. */
+    private fun today(): Flow<LocalDate> = flow {
+        while (true) {
+            val now = LocalDateTime.now()
+            emit(now.toLocalDate())
+            val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay()
+            delay(Duration.between(now, nextMidnight).toMillis() + 1_000)
         }
     }
 

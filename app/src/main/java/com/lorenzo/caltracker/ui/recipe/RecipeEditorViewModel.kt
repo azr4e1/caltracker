@@ -5,7 +5,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.Food
+import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Recipe
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.LogRepository
@@ -45,6 +47,13 @@ class RecipeEditorViewModel(
     /** One-off message to show in a snackbar. */
     var message by mutableStateOf<String?>(null)
 
+    /** Diary entries that became ingredients; on save they are replaced by one entry of the new recipe. */
+    private var sourceEntries = emptyList<LogEntry>()
+
+    /** How many diary entries the saved recipe replaced (0 when not created from the diary). */
+    var replacedCount = 0
+        private set
+
     private var savedSnapshot by mutableStateOf<List<Any>?>(null)
     private fun snapshot(): List<Any> = listOf(name, servings, cookedWeight, ingredients)
 
@@ -67,22 +76,29 @@ class RecipeEditorViewModel(
     /** Turns diary entries into ingredients: foods directly, recipes expanded, quick adds skipped. */
     private suspend fun prefillFromEntries(ids: List<Long>) {
         val rows = mutableListOf<IngredientRow>()
+        val used = mutableListOf<LogEntry>()
         var skipped = 0
         for (entry in logRepository.getByIds(ids)) {
             val food = entry.foodId?.let { foodRepository.get(it) }
             val recipe = entry.recipeId?.let { recipeRepository.get(it) }
-            when {
-                food != null -> entry.baseAmount(food)?.let { rows += IngredientRow(food, it) } ?: skipped++
-                recipe != null -> recipe.fractionOf(entry)
-                    ?.let { f -> recipe.scaledIngredients(f).forEach { (food, amount) -> rows += IngredientRow(food, amount) } }
-                    ?: skipped++
-                else -> skipped++
+            val parts: List<IngredientRow>? = when {
+                food != null -> entry.baseAmount(food)?.let { listOf(IngredientRow(food, it)) }
+                recipe != null -> recipe.fractionOf(entry)?.let { f -> recipe.scaledIngredients(f).map { (food, amount) -> IngredientRow(food, amount) } }
+                else -> null
+            }
+            if (parts == null) {
+                skipped++
+            } else {
+                rows += parts
+                used += entry
             }
         }
+        sourceEntries = used
         // The same food logged twice becomes one ingredient.
         ingredients = rows.groupBy { it.food.id }.map { (_, same) -> IngredientRow(same.first().food, same.sumOf { it.amount }) }
         if (skipped > 0) {
-            message = "$skipped ${if (skipped == 1) "entry was" else "entries were"} skipped: quick adds and deleted foods can't be ingredients."
+            message = "$skipped ${if (skipped == 1) "entry was" else "entries were"} skipped and stays in your diary: " +
+                "quick adds and deleted foods can't be ingredients."
         }
     }
 
@@ -134,9 +150,34 @@ class RecipeEditorViewModel(
         val recipe = base.copy(name = name.trim(), servings = servingsValue!!, totalWeight = cookedWeightValue)
         viewModelScope.launch {
             val id = recipeRepository.save(recipe, ingredients.map { it.food.id to it.amount })
+            if (sourceEntries.isNotEmpty()) replaceSourceEntries(recipe.copy(id = id))
             savedSnapshot = snapshot()
             onSaved(id)
         }
+    }
+
+    /** Swaps the diary entries the recipe was made from for one entry of the whole recipe, at the latest of their times. */
+    private suspend fun replaceSourceEntries(recipe: Recipe) {
+        val total = nutrition.total
+        val latest = sourceEntries.maxBy { it.time }
+        logRepository.replace(
+            sourceEntries,
+            listOf(
+                LogEntry(
+                    date = latest.date,
+                    time = latest.time,
+                    recipeId = recipe.id,
+                    name = recipe.name,
+                    amount = recipe.servings,
+                    unit = EntryUnit.SERVING,
+                    kcal = total.kcal,
+                    protein = total.protein,
+                    carbs = total.carbs,
+                    fat = total.fat,
+                ),
+            ),
+        )
+        replacedCount = sourceEntries.size
     }
 
     companion object {

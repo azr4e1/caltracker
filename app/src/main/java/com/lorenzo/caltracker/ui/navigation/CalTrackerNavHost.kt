@@ -29,6 +29,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.lorenzo.caltracker.data.remote.RemoteFood
 import com.lorenzo.caltracker.ui.addfood.AddFoodScreen
+import com.lorenzo.caltracker.ui.plural
 import com.lorenzo.caltracker.ui.diary.DiaryScreen
 import com.lorenzo.caltracker.ui.foodeditor.FoodEditorScreen
 import com.lorenzo.caltracker.ui.foodeditor.FoodEditorViewModel
@@ -120,7 +121,9 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                     onBack = navController::popBackStack,
                     onSaved = { recipeId ->
                         if (!route.logAfterSave) {
-                            Toast.makeText(context, "Recipe saved", Toast.LENGTH_SHORT).show()
+                            val replaced = viewModel.replacedCount
+                            val text = if (replaced > 0) "Recipe saved and logged in place of ${plural(replaced, "entry", "entries")}" else "Recipe saved"
+                            Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
                             navController.popBackStack()
                         } else if (route.recipeId == 0L) {
                             navController.navigate(LogRecipeRoute(recipeId, route.epochDay)) {

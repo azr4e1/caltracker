@@ -7,10 +7,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
+import com.lorenzo.caltracker.data.db.entity.WeightEntry
 import com.lorenzo.caltracker.data.repository.DiaryDateHolder
 import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
+import com.lorenzo.caltracker.data.repository.WeightRepository
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.domain.splitRecipeEntry
 import com.lorenzo.caltracker.ui.appViewModelFactory
@@ -19,12 +21,14 @@ import java.time.LocalTime
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class DiaryViewModel(
     private val logRepository: LogRepository,
     private val recipeRepository: RecipeRepository,
+    private val weightRepository: WeightRepository,
     private val dateHolder: DiaryDateHolder,
     settingsRepository: SettingsRepository,
 ) : ViewModel() {
@@ -32,6 +36,16 @@ class DiaryViewModel(
 
     val goals: StateFlow<Goals?> = settingsRepository.goals
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    val weights: StateFlow<List<WeightEntry>> = weightRepository.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val profileWeightKg: StateFlow<Double?> = settingsRepository.profile.map { it?.weightKg }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun logWeight(date: LocalDate, weightKg: Double) {
+        viewModelScope.launch { weightRepository.log(date, weightKg) }
+    }
 
     /** Ids of entries selected with a long press. Empty means not in selection mode. */
     var selectedIds by mutableStateOf(emptySet<Long>())
@@ -132,6 +146,8 @@ class DiaryViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { DiaryViewModel(it.logRepository, it.recipeRepository, it.diaryDate, it.settingsRepository) }
+        val Factory = appViewModelFactory {
+            DiaryViewModel(it.logRepository, it.recipeRepository, it.weightRepository, it.diaryDate, it.settingsRepository)
+        }
     }
 }

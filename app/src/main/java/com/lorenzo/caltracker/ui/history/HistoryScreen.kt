@@ -41,13 +41,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lorenzo.caltracker.data.db.entity.WeightEntry
 import com.lorenzo.caltracker.ui.diary.dateLabel
 import com.lorenzo.caltracker.ui.formatAmount
+import com.lorenzo.caltracker.ui.weight.WeightDialog
 import com.lorenzo.caltracker.ui.formatWhole
 import com.lorenzo.caltracker.ui.theme.MacroColors
 import com.lorenzo.caltracker.ui.theme.macroColors
@@ -184,7 +190,11 @@ private fun WeightHistory(
                 RangeSelector(state.range, onRangeChange)
                 if (state.weights.isEmpty()) {
                     Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
-                        Text("Log your weight to see your trend here.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            "Log your weight with the + button in the Diary\nto see your trend here.",
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                        )
                     }
                 } else {
                     WeightChart(
@@ -193,6 +203,7 @@ private fun WeightHistory(
                         visibleCount = state.range.days,
                         onVisibleRangeChange = { visibleRange = it },
                     )
+                    WeightLegend()
                 }
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -213,10 +224,6 @@ private fun WeightHistory(
                             val sign = if (change > 0) "+" else if (change < 0) "−" else "±"
                             Text("$sign${abs(change).formatAmount()} kg in this period", style = MaterialTheme.typography.bodyMedium)
                         }
-                        FilledTonalButton(
-                            onClick = { dialog = WeightDialogState(null) },
-                            modifier = Modifier.padding(top = 8.dp),
-                        ) { Text("Log weight") }
                     }
                 }
                 SectionTitle("Weigh-ins")
@@ -250,6 +257,32 @@ private fun WeightHistory(
 }
 
 private data class WeightDialogState(val entry: WeightEntry?)
+
+@Composable
+private fun WeightLegend() {
+    val color = MaterialTheme.colorScheme.primary
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        LineKey("Weight") { y ->
+            drawLine(color, Offset(0f, y), Offset(size.width, y), strokeWidth = 2.dp.toPx())
+            drawCircle(color, radius = 4.dp.toPx(), center = Offset(size.width / 2, y))
+        }
+        LineKey("7-day average") { y ->
+            drawLine(
+                color.copy(alpha = AVERAGE_ALPHA), Offset(0f, y), Offset(size.width, y),
+                strokeWidth = 2.dp.toPx(), cap = StrokeCap.Round,
+                pathEffect = PathEffect.dashPathEffect(floatArrayOf(1.dp.toPx(), 5.dp.toPx())),
+            )
+        }
+    }
+}
+
+@Composable
+private fun LineKey(label: String, draw: DrawScope.(centerY: Float) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Canvas(Modifier.size(width = 20.dp, height = 10.dp)) { draw(size.height / 2) }
+        Text(label, style = MaterialTheme.typography.labelMedium)
+    }
+}
 
 /** The items in [range], or the last [count] while the chart hasn't reported its range yet. */
 private fun <T> List<T>.window(range: IntRange?, count: Int): List<T> =

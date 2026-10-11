@@ -1,4 +1,4 @@
-package com.lorenzo.caltracker.ui.history
+package com.lorenzo.caltracker.ui.weight
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -24,16 +24,20 @@ import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.toDecimalOrNull
 import java.time.LocalDate
 
-/** Logs a new weigh-in ([existing] null) or edits one. */
+/**
+ * Logs a new weigh-in ([existing] null, on [initialDate]) or edits one. [onDelete] null hides
+ * the delete button.
+ */
 @Composable
 fun WeightDialog(
     existing: WeightEntry?,
     suggestedKg: Double?,
     onDismiss: () -> Unit,
     onSave: (LocalDate, Double) -> Unit,
-    onDelete: () -> Unit,
+    onDelete: (() -> Unit)?,
+    initialDate: LocalDate = existing?.date ?: LocalDate.now(),
 ) {
-    var date by remember { mutableStateOf(existing?.date ?: LocalDate.now()) }
+    var date by remember { mutableStateOf(initialDate) }
     var weight by remember { mutableStateOf((existing?.weightKg ?: suggestedKg)?.formatAmount().orEmpty()) }
     var pickDate by remember { mutableStateOf(false) }
     val kg = weight.toDecimalOrNull()?.takeIf { it in 20.0..400.0 }
@@ -50,7 +54,7 @@ fun WeightDialog(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (existing != null) {
+                if (existing != null && onDelete != null) {
                     TextButton(
                         onClick = onDelete,
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),

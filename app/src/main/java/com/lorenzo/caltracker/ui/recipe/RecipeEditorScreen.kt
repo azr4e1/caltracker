@@ -82,6 +82,13 @@ fun RecipeEditorScreen(
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            if (!logAfterSave && !vm.isEditing) {
+                Text(
+                    "When you save, the selected diary entries are replaced by this recipe.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (vm.isEditing) {
                 Text(
                     "Changes apply to future entries. Entries already in your diary keep their values.",

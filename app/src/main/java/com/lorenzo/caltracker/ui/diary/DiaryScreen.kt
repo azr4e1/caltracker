@@ -1,6 +1,11 @@
 package com.lorenzo.caltracker.ui.diary
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -40,10 +45,12 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -60,6 +67,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -68,6 +76,7 @@ import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.domain.totalNutrients
+import com.lorenzo.caltracker.ui.components.AppIcons
 import com.lorenzo.caltracker.ui.components.DateSelectDialog
 import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.formatHm
@@ -75,6 +84,7 @@ import com.lorenzo.caltracker.ui.formatWhole
 import com.lorenzo.caltracker.ui.plural
 import com.lorenzo.caltracker.ui.unitLabel
 import com.lorenzo.caltracker.ui.theme.macroColors
+import com.lorenzo.caltracker.ui.weight.WeightDialog
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
@@ -106,6 +116,10 @@ fun DiaryScreen(
     var showDatePicker by remember { mutableStateOf(false) }
     var editing by remember { mutableStateOf<LogEntry?>(null) }
     var pendingDateAction by remember { mutableStateOf<PendingDateAction?>(null) }
+    var addMenuOpen by remember { mutableStateOf(false) }
+    var loggingWeight by remember { mutableStateOf(false) }
+    val weights by viewModel.weights.collectAsStateWithLifecycle()
+    val profileWeight by viewModel.profileWeightKg.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -188,9 +202,18 @@ fun DiaryScreen(
         },
         floatingActionButton = {
             if (!selecting) {
-                FloatingActionButton(onClick = { onAddFood(selectedDate) }) {
-                    Icon(Icons.Filled.Add, contentDescription = "Add food")
-                }
+                AddMenu(
+                    expanded = addMenuOpen,
+                    onToggle = { addMenuOpen = !addMenuOpen },
+                    onFood = {
+                        addMenuOpen = false
+                        onAddFood(selectedDate)
+                    },
+                    onWeight = {
+                        addMenuOpen = false
+                        loggingWeight = true
+                    },
+                )
             }
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -211,6 +234,23 @@ fun DiaryScreen(
                 onLongClick = viewModel::toggleSelection,
             )
         }
+    }
+
+    if (loggingWeight) {
+        // Logs for the day on screen; an existing weigh-in that day is pre-filled and replaced.
+        val existing = weights.firstOrNull { it.date == selectedDate }
+        WeightDialog(
+            existing = null,
+            initialDate = selectedDate,
+            suggestedKg = existing?.weightKg ?: weights.lastOrNull()?.weightKg ?: profileWeight,
+            onDismiss = { loggingWeight = false },
+            onSave = { date, kg ->
+                viewModel.logWeight(date, kg)
+                loggingWeight = false
+                scope.launch { snackbarHostState.showSnackbar("Weight ${kg.formatAmount()} kg logged for ${dateLabel(date).lowercase()}") }
+            },
+            onDelete = null,
+        )
     }
 
     if (showDatePicker) {
@@ -300,6 +340,34 @@ fun DiaryScreen(
                 deleteWithUndo(listOf(entry))
             },
         )
+    }
+}
+
+/** The + button; it opens two choices above it: log food or log weight. */
+@Composable
+private fun AddMenu(expanded: Boolean, onToggle: () -> Unit, onFood: () -> Unit, onWeight: () -> Unit) {
+    Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        AnimatedVisibility(visible = expanded, enter = fadeIn() + expandVertically(expandFrom = Alignment.Bottom), exit = fadeOut() + shrinkVertically(shrinkTowards = Alignment.Bottom)) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                AddMenuItem("Weight", AppIcons.Weight, onWeight)
+                AddMenuItem("Food", AppIcons.Food, onFood)
+            }
+        }
+        FloatingActionButton(onClick = onToggle) {
+            Icon(if (expanded) Icons.Filled.Close else Icons.Filled.Add, contentDescription = if (expanded) "Close" else "Add")
+        }
+    }
+}
+
+@Composable
+private fun AddMenuItem(label: String, icon: ImageVector, onClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.surfaceContainerHigh, shadowElevation = 2.dp) {
+            Text(label, style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+        }
+        SmallFloatingActionButton(onClick = onClick, modifier = Modifier.padding(end = 4.dp)) {
+            Icon(icon, contentDescription = "Log $label".lowercase().replaceFirstChar { it.uppercase() })
+        }
     }
 }
 

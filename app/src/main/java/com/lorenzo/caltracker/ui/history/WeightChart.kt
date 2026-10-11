@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -60,6 +61,7 @@ fun WeightChart(
     val points = remember(dates, weights) {
         dates.withIndex().mapNotNull { (i, d) -> weights[d]?.let { i to it } }
     }
+    val average = remember(points) { rollingAverage(points) }
 
     Canvas(
         modifier
@@ -96,6 +98,23 @@ fun WeightChart(
             val first = points.indexOfLast { it.first < drawn.first }.coerceAtLeast(0)
             val last = points.indexOfFirst { it.first > drawn.last }.let { if (it == -1) points.lastIndex else it }
             val shown = if (points.isEmpty()) emptyList() else points.subList(first, last + 1)
+            // 7-day average: faded and dotted, drawn under the weigh-ins.
+            val avgShown = average.filter { it.first in (drawn.first - 1)..(drawn.last + 1) }
+            if (avgShown.size > 1) {
+                val avgPath = Path()
+                avgShown.forEachIndexed { i, (index, kg) ->
+                    if (i == 0) avgPath.moveTo(x(index), y(kg)) else avgPath.lineTo(x(index), y(kg))
+                }
+                drawPath(
+                    avgPath,
+                    lineColor.copy(alpha = AVERAGE_ALPHA),
+                    style = Stroke(
+                        width = 2.dp.toPx(),
+                        cap = StrokeCap.Round,
+                        pathEffect = PathEffect.dashPathEffect(floatArrayOf(1.dp.toPx(), 5.dp.toPx())),
+                    ),
+                )
+            }
             if (shown.size > 1) {
                 val path = Path()
                 shown.forEachIndexed { i, (index, kg) ->
@@ -114,6 +133,20 @@ fun WeightChart(
                 top = plotBottom + 4.dp.toPx(), measurer = textMeasurer, style = labelStyle,
             )
         }
+    }
+}
+
+internal const val AVERAGE_ALPHA = 0.5f
+
+/**
+ * 7-day rolling average for every day from the first to the last weigh-in, as (day index, kg):
+ * the mean of the weigh-ins in that day and the 6 before it. Days with none in the window are skipped.
+ */
+internal fun rollingAverage(points: List<Pair<Int, Double>>, window: Int = 7): List<Pair<Int, Double>> {
+    if (points.isEmpty()) return emptyList()
+    return (points.first().first..points.last().first).mapNotNull { day ->
+        val inWindow = points.filter { it.first in (day - window + 1)..day }
+        if (inWindow.isEmpty()) null else day to inWindow.sumOf { it.second } / inWindow.size
     }
 }
 
