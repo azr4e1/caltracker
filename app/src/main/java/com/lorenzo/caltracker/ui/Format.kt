@@ -1,6 +1,7 @@
 package com.lorenzo.caltracker.ui
 
 import com.lorenzo.caltracker.data.db.entity.EntryUnit
+import com.lorenzo.caltracker.data.db.entity.LogEntry
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.roundToInt
@@ -27,3 +28,14 @@ fun EntryUnit.label(amount: Double): String = when (this) {
 
 /** Parses user input, accepting both "1.5" and "1,5". */
 fun String.toDecimalOrNull(): Double? = trim().replace(',', '.').toDoubleOrNull()
+
+/** Unit shown next to a logged amount; recipe servings read as portions. */
+fun LogEntry.unitLabel(value: Double = amount): String =
+    if (recipeId != null && unit == EntryUnit.SERVING) {
+        if (value == 1.0) "portion" else "portions"
+    } else {
+        unit.label(value)
+    }
+
+/** "1 entry", "3 entries". */
+fun plural(count: Int, one: String, many: String): String = "$count ${if (count == 1) one else many}"

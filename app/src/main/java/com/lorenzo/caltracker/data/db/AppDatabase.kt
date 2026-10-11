@@ -10,15 +10,25 @@ import com.lorenzo.caltracker.data.db.dao.FoodDao
 import com.lorenzo.caltracker.data.db.dao.LogEntryDao
 import com.lorenzo.caltracker.data.db.dao.RecipeDao
 import com.lorenzo.caltracker.data.db.dao.SettingsDao
+import com.lorenzo.caltracker.data.db.dao.WeightDao
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Profile
 import com.lorenzo.caltracker.data.db.entity.Recipe
 import com.lorenzo.caltracker.data.db.entity.RecipeIngredient
+import com.lorenzo.caltracker.data.db.entity.WeightEntry
 
 @Database(
-    entities = [Food::class, Recipe::class, RecipeIngredient::class, LogEntry::class, Profile::class, Goals::class],
+    entities = [
+        Food::class,
+        Recipe::class,
+        RecipeIngredient::class,
+        LogEntry::class,
+        Profile::class,
+        Goals::class,
+        WeightEntry::class,
+    ],
     version = AppDatabase.VERSION,
     exportSchema = true,
 )
@@ -29,9 +39,10 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun logEntryDao(): LogEntryDao
     abstract fun settingsDao(): SettingsDao
     abstract fun backupDao(): BackupDao
+    abstract fun weightDao(): WeightDao
 
     companion object {
-        const val VERSION = 3
+        const val VERSION = 4
 
 
         fun create(context: Context): AppDatabase =

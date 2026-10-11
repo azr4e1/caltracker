@@ -41,9 +41,18 @@ enum class EditorSection { PROFILE, GOALS, BOTH }
 @Serializable
 data class ProfileEditorRoute(val section: EditorSection = EditorSection.BOTH, val isSetup: Boolean = false)
 
-/** Creates a recipe ([recipeId] 0) or edits one. A new recipe is then opened for logging on [epochDay]. */
+/**
+ * Creates a recipe ([recipeId] 0) or edits one. [fromEntryIds] (comma-separated diary entry ids)
+ * pre-fills a new recipe with those entries' foods. With [logAfterSave], a new recipe is then
+ * opened for logging on [epochDay].
+ */
 @Serializable
-data class RecipeEditorRoute(val recipeId: Long = 0, val epochDay: Long)
+data class RecipeEditorRoute(
+    val recipeId: Long = 0,
+    val epochDay: Long,
+    val fromEntryIds: String? = null,
+    val logAfterSave: Boolean = true,
+)
 
 @Serializable
 data class LogRecipeRoute(val recipeId: Long, val epochDay: Long)

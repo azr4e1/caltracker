@@ -22,8 +22,19 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
     }
 }
 
+/** 3 -> 4: weight tracking. */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `weight_entries` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "`date` TEXT NOT NULL, `weightKg` REAL NOT NULL, `createdAt` INTEGER NOT NULL)",
+        )
+        db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_weight_entries_date` ON `weight_entries` (`date`)")
+    }
+}
+
 /** Shared with backup restore, so old backups get the same fix. */
 const val QUICK_ADD_UNIT_SQL =
     "UPDATE log_entries SET unit = 'QUICK' WHERE foodId IS NULL AND recipeId IS NULL AND unit = 'SERVING'"
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)

@@ -76,6 +76,8 @@ dependencies {
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.fastexcel)
     implementation(libs.code.scanner)
+    implementation(libs.androidx.glance.appwidget)
+    implementation(libs.androidx.glance.material3)
 
     testImplementation(libs.junit)
 }

@@ -41,6 +41,9 @@ interface LogEntryDao {
     @Query("SELECT * FROM log_entries WHERE foodId = :foodId ORDER BY createdAt DESC LIMIT 1")
     suspend fun lastForFood(foodId: Long): LogEntry?
 
+    @Query("SELECT * FROM log_entries WHERE id IN (:ids) ORDER BY time, id")
+    suspend fun getByIds(ids: List<Long>): List<LogEntry>
+
     /** Every entry, oldest first; used for the Excel export. */
     @Query("SELECT * FROM log_entries ORDER BY date, time, id")
     suspend fun getAll(): List<LogEntry>
@@ -49,7 +52,7 @@ interface LogEntryDao {
     suspend fun insert(entry: LogEntry): Long
 
     @Insert
-    suspend fun insertAll(entries: List<LogEntry>)
+    suspend fun insertAll(entries: List<LogEntry>): List<Long>
 
     @Update
     suspend fun update(entry: LogEntry)

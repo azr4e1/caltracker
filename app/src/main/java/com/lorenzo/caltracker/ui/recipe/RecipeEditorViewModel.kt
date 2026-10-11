@@ -8,8 +8,12 @@ import androidx.lifecycle.viewModelScope
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.db.entity.Recipe
 import com.lorenzo.caltracker.data.repository.FoodRepository
+import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.domain.RecipeNutrition
+import com.lorenzo.caltracker.domain.baseAmount
+import com.lorenzo.caltracker.domain.fractionOf
+import com.lorenzo.caltracker.domain.scaledIngredients
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.toDecimalOrNull
@@ -23,8 +27,10 @@ data class IngredientEdit(val food: Food, val amount: Double, val index: Int?)
 
 class RecipeEditorViewModel(
     private val recipeId: Long,
+    fromEntryIds: List<Long>,
     private val recipeRepository: RecipeRepository,
     private val foodRepository: FoodRepository,
+    private val logRepository: LogRepository,
 ) : ViewModel() {
     val isEditing: Boolean get() = recipeId != 0L
     private var original: Recipe? = null
@@ -35,6 +41,9 @@ class RecipeEditorViewModel(
     var ingredients by mutableStateOf(emptyList<IngredientRow>())
         private set
     var editing by mutableStateOf<IngredientEdit?>(null)
+
+    /** One-off message to show in a snackbar. */
+    var message by mutableStateOf<String?>(null)
 
     private var savedSnapshot by mutableStateOf<List<Any>?>(null)
     private fun snapshot(): List<Any> = listOf(name, servings, cookedWeight, ingredients)
@@ -51,6 +60,29 @@ class RecipeEditorViewModel(
                 }
             }
             savedSnapshot = snapshot()
+            if (fromEntryIds.isNotEmpty()) prefillFromEntries(fromEntryIds)
+        }
+    }
+
+    /** Turns diary entries into ingredients: foods directly, recipes expanded, quick adds skipped. */
+    private suspend fun prefillFromEntries(ids: List<Long>) {
+        val rows = mutableListOf<IngredientRow>()
+        var skipped = 0
+        for (entry in logRepository.getByIds(ids)) {
+            val food = entry.foodId?.let { foodRepository.get(it) }
+            val recipe = entry.recipeId?.let { recipeRepository.get(it) }
+            when {
+                food != null -> entry.baseAmount(food)?.let { rows += IngredientRow(food, it) } ?: skipped++
+                recipe != null -> recipe.fractionOf(entry)
+                    ?.let { f -> recipe.scaledIngredients(f).forEach { (food, amount) -> rows += IngredientRow(food, amount) } }
+                    ?: skipped++
+                else -> skipped++
+            }
+        }
+        // The same food logged twice becomes one ingredient.
+        ingredients = rows.groupBy { it.food.id }.map { (_, same) -> IngredientRow(same.first().food, same.sumOf { it.amount }) }
+        if (skipped > 0) {
+            message = "$skipped ${if (skipped == 1) "entry was" else "entries were"} skipped: quick adds and deleted foods can't be ingredients."
         }
     }
 
@@ -108,6 +140,8 @@ class RecipeEditorViewModel(
     }
 
     companion object {
-        fun factory(recipeId: Long) = appViewModelFactory { RecipeEditorViewModel(recipeId, it.recipeRepository, it.foodRepository) }
+        fun factory(recipeId: Long, fromEntryIds: List<Long> = emptyList()) = appViewModelFactory {
+            RecipeEditorViewModel(recipeId, fromEntryIds, it.recipeRepository, it.foodRepository, it.logRepository)
+        }
     }
 }

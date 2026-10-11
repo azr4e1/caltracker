@@ -25,10 +25,13 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +49,7 @@ import com.lorenzo.caltracker.ui.formatWhole
 @Composable
 fun RecipeEditorScreen(
     viewModel: RecipeEditorViewModel,
+    logAfterSave: Boolean,
     onAddIngredient: () -> Unit,
     onBack: () -> Unit,
     onSaved: (Long) -> Unit,
@@ -54,8 +58,16 @@ fun RecipeEditorScreen(
     var confirmDiscard by remember { mutableStateOf(false) }
     val onBackPressed = { if (vm.hasUnsavedChanges) confirmDiscard = true else onBack() }
     BackHandler(enabled = vm.hasUnsavedChanges) { confirmDiscard = true }
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(vm.message) {
+        vm.message?.let {
+            snackbarHostState.showSnackbar(it)
+            vm.message = null
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(if (vm.isEditing) "Edit recipe" else "New recipe") },
@@ -120,7 +132,7 @@ fun RecipeEditorScreen(
             }
 
             Button(onClick = { vm.save(onSaved) }, enabled = vm.isValid, modifier = Modifier.fillMaxWidth()) {
-                Text(if (vm.isEditing) "Save" else "Save and log")
+                Text(if (vm.isEditing || !logAfterSave) "Save" else "Save and log")
             }
         }
     }

@@ -8,6 +8,7 @@ import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Recipe
 import com.lorenzo.caltracker.data.db.entity.RecipeIngredient
+import com.lorenzo.caltracker.data.db.entity.WeightEntry
 import java.io.File
 import java.time.LocalDate
 import java.time.LocalTime
@@ -35,15 +36,15 @@ class ExcelExporterTest {
         )
 
         val file = File.createTempFile("export", ".xlsx").apply { deleteOnExit() }
-        file.outputStream().use { ExcelExporter.write(it, entries, foods, recipes, goals) }
+        file.outputStream().use { ExcelExporter.write(it, entries, foods, recipes, listOf(WeightEntry(date = day, weightKg = 92.4)), goals) }
 
         // Read via the central directory, like Excel does (the zip is written in streaming mode).
         val files = ZipFile(file).use { zip ->
             zip.entries().asSequence().associate { it.name to zip.getInputStream(it).readBytes().decodeToString() }
         }
-        assertTrue(files.keys.toString(), files.keys.containsAll(listOf("xl/worksheets/sheet1.xml", "xl/worksheets/sheet2.xml", "xl/worksheets/sheet3.xml", "xl/worksheets/sheet4.xml")))
+        assertTrue(files.keys.toString(), files.keys.containsAll(listOf("xl/worksheets/sheet1.xml", "xl/worksheets/sheet2.xml", "xl/worksheets/sheet3.xml", "xl/worksheets/sheet4.xml", "xl/worksheets/sheet5.xml")))
         val workbook = files.getValue("xl/workbook.xml")
-        listOf("Entries", "Daily totals", "Foods", "Recipes").forEach { assertTrue(it, workbook.contains("name=\"$it\"")) }
+        listOf("Entries", "Daily totals", "Foods", "Recipes", "Weight").forEach { assertTrue(it, workbook.contains("name=\"$it\"")) }
         val strings = files.getValue("xl/sharedStrings.xml")
         listOf("Oats", "Snack", "Quick add", "Porridge").forEach { assertTrue(it, strings.contains(it)) }
     }

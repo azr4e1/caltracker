@@ -5,6 +5,7 @@ import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
+import com.lorenzo.caltracker.data.db.entity.WeightEntry
 import com.lorenzo.caltracker.domain.nutrientsFor
 import java.io.OutputStream
 import org.dhatim.fastexcel.Workbook
@@ -12,7 +13,7 @@ import org.dhatim.fastexcel.Worksheet
 
 /**
  * Writes the diary as an .xlsx workbook: every entry, one row per day, the saved foods, and the
- * recipes (one row per ingredient). Dates and times are real Excel values, so they sort and filter correctly.
+ * recipes (one row per ingredient), and the weigh-ins. Dates and times are real Excel values, so they sort and filter correctly.
  */
 object ExcelExporter {
     private const val DATE_FORMAT = "yyyy-mm-dd"
@@ -24,6 +25,7 @@ object ExcelExporter {
         entries: List<LogEntry>,
         foods: List<Food>,
         recipes: List<RecipeWithIngredients>,
+        weights: List<WeightEntry>,
         goals: Goals?,
     ) {
         val workbook = Workbook(output, "CalTracker", "1.0")
@@ -31,6 +33,7 @@ object ExcelExporter {
         writeDailyTotals(workbook.newWorksheet("Daily totals"), entries, goals)
         writeFoods(workbook.newWorksheet("Foods"), foods)
         writeRecipes(workbook.newWorksheet("Recipes"), recipes)
+        writeWeights(workbook.newWorksheet("Weight"), weights)
         workbook.finish()
     }
 
@@ -109,6 +112,15 @@ object ExcelExporter {
             }
         }
         widths(ws, 24, 9, 16, 28, 9, 6, 8, 12, 11, 9)
+    }
+
+    private fun writeWeights(ws: Worksheet, weights: List<WeightEntry>) {
+        header(ws, "Date", "Weight (kg)")
+        weights.forEachIndexed { i, w ->
+            date(ws, i + 1, 0, w.date)
+            numbers(ws, i + 1, 1, w.weightKg)
+        }
+        widths(ws, 12, 12)
     }
 
     private fun header(ws: Worksheet, vararg titles: String) {

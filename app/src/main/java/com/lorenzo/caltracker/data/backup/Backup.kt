@@ -6,6 +6,7 @@ import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Profile
 import com.lorenzo.caltracker.data.db.entity.Recipe
 import com.lorenzo.caltracker.data.db.entity.RecipeIngredient
+import com.lorenzo.caltracker.data.db.entity.WeightEntry
 import kotlinx.serialization.Serializable
 
 /** Everything in the database, as written to a backup JSON file. */
@@ -20,4 +21,5 @@ data class Backup(
     val logEntries: List<LogEntry> = emptyList(),
     val profile: Profile? = null,
     val goals: Goals? = null,
+    val weightEntries: List<WeightEntry> = emptyList(),
 )

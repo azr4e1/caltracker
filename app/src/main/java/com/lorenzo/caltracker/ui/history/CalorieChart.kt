@@ -1,23 +1,16 @@
 package com.lorenzo.caltracker.ui.history
 
-import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -34,23 +27,17 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.text.TextMeasurer
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
 import com.lorenzo.caltracker.ui.formatWhole
 import com.lorenzo.caltracker.ui.theme.MacroColors
-import java.time.format.DateTimeFormatter
 import kotlin.math.ceil
 import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
-import kotlinx.coroutines.launch
 
-private val Y_AXIS_WIDTH = 36.dp
-private val X_AXIS_HEIGHT = 22.dp
 private val SEGMENT_GAP = 2.dp
 private val CORNER = 4.dp
 private val MAX_COLUMN_WIDTH = 28.dp
@@ -79,7 +66,6 @@ fun CalorieChart(
     val gridColor = MaterialTheme.colorScheme.outlineVariant
     val goalColor = MaterialTheme.colorScheme.onSurfaceVariant
     val surface = MaterialTheme.colorScheme.surface
-    val scope = rememberCoroutineScope()
     val density = LocalDensity.current
 
     // Gestures are set up once, so they must read the latest values through these.
@@ -87,25 +73,11 @@ fun CalorieChart(
     val currentSelected by rememberUpdatedState(selectedIndex)
     val currentOnSelect by rememberUpdatedState(onSelect)
 
-    // How many days the window is scrolled back from today (0 = ends today). Fractional while dragging.
-    val daysBack = remember(visibleCount) { Animatable(0f) }
+    val daysBack = rememberDaysBack(visibleCount)
     val maxBack = (days.size - visibleCount).coerceAtLeast(0).toFloat()
     var widthPx by remember { mutableIntStateOf(0) }
     val slotPx = with(density) { (widthPx - Y_AXIS_WIDTH.toPx()) / visibleCount }.coerceAtLeast(1f)
-
-    fun visibleRange(back: Int): IntRange {
-        val end = currentDays.lastIndex - back
-        return (end - visibleCount + 1).coerceAtLeast(0)..end
-    }
-
-    LaunchedEffect(daysBack, visibleCount) {
-        snapshotFlow { daysBack.value.roundToInt() to currentDays.size }
-            .collect { (back, _) -> onVisibleRangeChange(visibleRange(back)) }
-    }
-
-    val dragState = rememberDraggableState { delta ->
-        scope.launch { daysBack.snapTo((daysBack.value + delta / slotPx).coerceIn(0f, maxBack)) }
-    }
+    ReportVisibleRange(daysBack, days.size, visibleCount, onVisibleRangeChange)
 
     Canvas(
         modifier
@@ -113,15 +85,7 @@ fun CalorieChart(
             .height(240.dp)
             .onSizeChanged { widthPx = it.width }
             .semantics { contentDescription = "Calories per day, $visibleCount days at a time. Drag sideways for earlier days." }
-            .draggable(
-                state = dragState,
-                orientation = Orientation.Horizontal,
-                onDragStopped = { velocity ->
-                    // Coast a little in the fling direction, then settle on a whole day.
-                    val target = (daysBack.value + velocity / slotPx * 0.15f).roundToInt().toFloat().coerceIn(0f, maxBack)
-                    daysBack.animateTo(target)
-                },
-            )
+            .dayScroll(daysBack, maxBack, slotPx)
             .pointerInput(visibleCount) {
                 detectTapGestures { tap ->
                     val left = Y_AXIS_WIDTH.toPx()
@@ -142,7 +106,7 @@ fun CalorieChart(
         val drawn = (floor(firstVisible).toInt() - 1).coerceAtLeast(0)..min(ceil(firstVisible + visibleCount).toInt(), days.lastIndex)
 
         // The y-axis fits the days on screen once the scroll settles, so it doesn't jump while dragging.
-        val settled = visibleRange(daysBack.targetValue.roundToInt())
+        val settled = visibleRange(days.size, visibleCount, daysBack.targetValue.roundToInt())
         val maxValue = max(settled.maxOfOrNull { days[it].stackKcal } ?: 0.0, goalKcal ?: 0.0).coerceAtLeast(500.0) * 1.05
         val step = niceStep(maxValue)
         val yMax = ceil(maxValue / step) * step
@@ -153,7 +117,7 @@ fun CalorieChart(
         while (tick <= yMax + 0.1) {
             val ty = y(tick)
             drawLine(gridColor, Offset(left, ty), Offset(size.width, ty), strokeWidth = 1.dp.toPx())
-            drawLabel(textMeasurer, compact(tick), labelStyle, Offset(0f, ty), alignRight = left - 6.dp.toPx())
+            drawAxisLabel(textMeasurer, compact(tick), labelStyle, ty, right = left - 6.dp.toPx())
             tick += step
         }
 
@@ -185,25 +149,10 @@ fun CalorieChart(
                 }
             }
 
-            // X-axis labels, anchored to days counted back from today so they scroll with the columns.
-            val every = when {
-                visibleCount <= 7 -> 1
-                visibleCount <= 31 -> 7
-                else -> 15
-            }
-            val formatter = if (visibleCount <= 7) DateTimeFormatter.ofPattern("EEE") else DateTimeFormatter.ofPattern("d MMM")
-            var nextLabelRight = Float.MAX_VALUE
-            for (i in drawn.reversed()) {
-                if ((days.lastIndex - i) % every != 0) continue
-                val label = textMeasurer.measure(days[i].date.format(formatter), labelStyle)
-                val lx = x(i) + slotPx / 2 - label.size.width / 2
-                // Skip labels cut off at the edges or touching the one to their right.
-                val fits = lx >= left && lx + label.size.width <= size.width
-                if (fits && lx + label.size.width + 8.dp.toPx() <= nextLabelRight) {
-                    drawText(label, topLeft = Offset(lx, plotBottom + 4.dp.toPx()))
-                    nextLabelRight = lx
-                }
-            }
+            drawDateLabels(
+                days.map { it.date }, drawn.reversed(), visibleCount, ::x, slotPx, left,
+                top = plotBottom + 4.dp.toPx(), measurer = textMeasurer, style = labelStyle,
+            )
         }
 
         // Goal line, drawn over the columns with a surface halo so it stays visible
@@ -240,11 +189,6 @@ private fun DrawScope.drawSegment(rect: Rect, color: Color, topRadius: Float) {
         )
     }
     drawPath(path, color)
-}
-
-private fun DrawScope.drawLabel(measurer: TextMeasurer, text: String, style: TextStyle, anchor: Offset, alignRight: Float) {
-    val layout = measurer.measure(text, style)
-    drawText(layout, topLeft = Offset(alignRight - layout.size.width, anchor.y - layout.size.height / 2))
 }
 
 /** Grid step giving at most ~5 lines: 250, 500, 1000, ... kcal. */

@@ -28,8 +28,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -61,7 +64,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.domain.Nutrients
@@ -70,7 +72,8 @@ import com.lorenzo.caltracker.ui.components.DateSelectDialog
 import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.formatHm
 import com.lorenzo.caltracker.ui.formatWhole
-import com.lorenzo.caltracker.ui.label
+import com.lorenzo.caltracker.ui.plural
+import com.lorenzo.caltracker.ui.unitLabel
 import com.lorenzo.caltracker.ui.theme.macroColors
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -90,6 +93,7 @@ private data class PendingDateAction(val action: DateAction, val entries: List<L
 @Composable
 fun DiaryScreen(
     onAddFood: (LocalDate) -> Unit,
+    onCreateRecipe: (entryIds: List<Long>) -> Unit,
     viewModel: DiaryViewModel = viewModel(factory = DiaryViewModel.Factory),
 ) {
     val selectedDate by viewModel.selectedDate.collectAsStateWithLifecycle()
@@ -127,7 +131,7 @@ fun DiaryScreen(
     fun deleteWithUndo(entries: List<LogEntry>) {
         viewModel.delete(entries)
         scope.launch {
-            val message = if (entries.size == 1) "Deleted ${entries[0].name}" else "Deleted ${entries.size} entries"
+            val message = if (entries.size == 1) "Deleted ${entries[0].name}" else "Deleted ${plural(entries.size, "entry", "entries")}"
             val result = snackbarHostState.showSnackbar(message, actionLabel = "Undo", duration = SnackbarDuration.Short)
             if (result == SnackbarResult.ActionPerformed) viewModel.restore(entries)
         }
@@ -146,6 +150,14 @@ fun DiaryScreen(
                         TextButton(onClick = { pendingDateAction = PendingDateAction(DateAction.COPY, selectedEntries) }) { Text("Copy") }
                         TextButton(onClick = { pendingDateAction = PendingDateAction(DateAction.MOVE, selectedEntries) }) { Text("Move") }
                         IconButton(onClick = { deleteWithUndo(selectedEntries) }) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
+                        OverflowMenu(
+                            "Select all" to { viewModel.selectAll(currentEntries) },
+                            "Create recipe" to {
+                                val ids = selectedEntries.map { it.id }
+                                viewModel.clearSelection()
+                                onCreateRecipe(ids)
+                            },
+                        )
                     },
                 )
             } else {
@@ -163,6 +175,12 @@ fun DiaryScreen(
                     actions = {
                         IconButton(onClick = viewModel::nextDay) {
                             Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Next day")
+                        }
+                        if (currentEntries.isNotEmpty()) {
+                            OverflowMenu(
+                                "Copy day to…" to { pendingDateAction = PendingDateAction(DateAction.COPY, currentEntries) },
+                                "Select all" to { viewModel.selectAll(currentEntries) },
+                            )
                         }
                     },
                 )
@@ -260,11 +278,48 @@ fun DiaryScreen(
                 editing = null
                 pendingDateAction = PendingDateAction(DateAction.MOVE, listOf(entry))
             },
+            onSplit = {
+                editing = null
+                viewModel.splitRecipe(entry) { parts ->
+                    scope.launch {
+                        if (parts.isEmpty()) {
+                            snackbarHostState.showSnackbar("This recipe no longer exists, so it can't be split.")
+                        } else {
+                            val result = snackbarHostState.showSnackbar(
+                                "Split ${entry.name} into ${plural(parts.size, "entry", "entries")}",
+                                actionLabel = "Undo",
+                                duration = SnackbarDuration.Short,
+                            )
+                            if (result == SnackbarResult.ActionPerformed) viewModel.undoSplit(entry, parts)
+                        }
+                    }
+                }
+            },
             onDelete = {
                 editing = null
                 deleteWithUndo(listOf(entry))
             },
         )
+    }
+}
+
+/** A ⋮ button opening a menu of (label, action) items. */
+@Composable
+private fun OverflowMenu(vararg items: Pair<String, () -> Unit>) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "More options") }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            items.forEach { (label, action) ->
+                DropdownMenuItem(
+                    text = { Text(label) },
+                    onClick = {
+                        open = false
+                        action()
+                    },
+                )
+            }
+        }
     }
 }
 
@@ -427,9 +482,5 @@ private fun TimelineRow(
 
 private fun entryDetails(entry: LogEntry): String {
     val macros = "P ${entry.protein.formatWhole()} · C ${entry.carbs.formatWhole()} · F ${entry.fat.formatWhole()}"
-    val unit = when {
-        entry.recipeId != null && entry.unit == EntryUnit.SERVING -> if (entry.amount == 1.0) "portion" else "portions"
-        else -> entry.unit.label(entry.amount)
-    }
-    return if (entry.isQuickAdd) "Quick add · $macros" else "${entry.amount.formatAmount()} $unit · $macros"
+    return if (entry.isQuickAdd) "Quick add · $macros" else "${entry.amount.formatAmount()} ${entry.unitLabel()} · $macros"
 }

@@ -9,8 +9,10 @@ import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.repository.DiaryDateHolder
 import com.lorenzo.caltracker.data.repository.LogRepository
+import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
 import com.lorenzo.caltracker.domain.Nutrients
+import com.lorenzo.caltracker.domain.splitRecipeEntry
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import java.time.LocalDate
 import java.time.LocalTime
@@ -22,6 +24,7 @@ import kotlinx.coroutines.launch
 
 class DiaryViewModel(
     private val logRepository: LogRepository,
+    private val recipeRepository: RecipeRepository,
     private val dateHolder: DiaryDateHolder,
     settingsRepository: SettingsRepository,
 ) : ViewModel() {
@@ -51,6 +54,27 @@ class DiaryViewModel(
 
     fun clearSelection() {
         selectedIds = emptySet()
+    }
+
+    fun selectAll(entries: List<LogEntry>) {
+        selectedIds = entries.map { it.id }.toSet()
+    }
+
+    /**
+     * Replaces a logged recipe with its ingredients. Calls [onDone] with the new entries (for undo),
+     * or with an empty list if the recipe no longer exists.
+     */
+    fun splitRecipe(entry: LogEntry, onDone: (List<LogEntry>) -> Unit) {
+        val recipeId = entry.recipeId ?: return
+        viewModelScope.launch {
+            val recipe = recipeRepository.get(recipeId)
+            val parts = recipe?.let { splitRecipeEntry(entry, it) }.orEmpty()
+            onDone(if (parts.isEmpty()) emptyList() else logRepository.replace(listOf(entry), parts))
+        }
+    }
+
+    fun undoSplit(original: LogEntry, parts: List<LogEntry>) {
+        viewModelScope.launch { logRepository.replace(parts, listOf(original)) }
     }
 
     /** Changes the quantity of a food entry, scaling its nutrient snapshot. */
@@ -108,6 +132,6 @@ class DiaryViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { DiaryViewModel(it.logRepository, it.diaryDate, it.settingsRepository) }
+        val Factory = appViewModelFactory { DiaryViewModel(it.logRepository, it.recipeRepository, it.diaryDate, it.settingsRepository) }
     }
 }

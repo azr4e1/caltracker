@@ -6,13 +6,13 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.lorenzo.caltracker.data.db.entity.BaseUnit
 import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.domain.Nutrients
+import com.lorenzo.caltracker.domain.baseEntryUnit
 import com.lorenzo.caltracker.domain.nutrientsFor
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import com.lorenzo.caltracker.ui.formatAmount
@@ -125,5 +125,3 @@ class LogFoodViewModel(
 }
 
 private val Food.hasServing: Boolean get() = servingSize != null && servingSize > 0
-
-private val Food.baseEntryUnit: EntryUnit get() = if (baseUnit == BaseUnit.ML) EntryUnit.ML else EntryUnit.G

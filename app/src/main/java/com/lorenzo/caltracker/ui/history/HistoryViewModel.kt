@@ -4,9 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lorenzo.caltracker.data.db.dao.DailyTotal
 import com.lorenzo.caltracker.data.db.entity.Goals
+import com.lorenzo.caltracker.data.db.entity.WeightEntry
 import com.lorenzo.caltracker.data.repository.DiaryDateHolder
 import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
+import com.lorenzo.caltracker.data.repository.WeightRepository
 import com.lorenzo.caltracker.domain.GoalCalculator
 import com.lorenzo.caltracker.domain.Nutrients.Companion.KCAL_PER_G_CARBS
 import com.lorenzo.caltracker.domain.Nutrients.Companion.KCAL_PER_G_FAT
@@ -18,9 +20,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 /** How many days the chart shows at once. Older days are reached by scrolling. */
 enum class HistoryRange(val days: Int, val label: String) {
@@ -54,27 +58,54 @@ data class DayColumn(
 
 data class HistoryUiState(
     val range: HistoryRange = HistoryRange.WEEK,
-    /** Every day from the first logged day (or at least 90 days back) to today, oldest first. */
+    /** Every day from the first logged day or weigh-in (or at least 90 days back) to today, oldest first. */
     val days: List<DayColumn> = emptyList(),
     val goals: Goals? = null,
+    /** Weigh-ins, oldest first. */
+    val weights: List<WeightEntry> = emptyList(),
+    val profileWeightKg: Double? = null,
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class HistoryViewModel(
     logRepository: LogRepository,
     settingsRepository: SettingsRepository,
+    private val weightRepository: WeightRepository,
     private val diaryDate: DiaryDateHolder,
 ) : ViewModel() {
     private val range = MutableStateFlow(HistoryRange.WEEK)
+    private val weights = weightRepository.observeAll()
 
-    private val allDays = logRepository.observeFirstDate().flatMapLatest { first ->
+    private val start = combine(logRepository.observeFirstDate(), weights) { firstLog, weighIns ->
         val today = LocalDate.now()
-        val start = minOf(first ?: today, today.minusDays(HistoryRange.entries.maxOf { it.days } - 1L))
-        logRepository.observeDailyTotals(start, today).map { fillDays(start, today, it) }
+        listOfNotNull(firstLog, weighIns.firstOrNull()?.date, today.minusDays(HistoryRange.entries.maxOf { it.days } - 1L)).min()
+    }.distinctUntilChanged()
+
+    private val allDays = start.flatMapLatest { from ->
+        val today = LocalDate.now()
+        logRepository.observeDailyTotals(from, today).map { fillDays(from, today, it) }
     }
 
-    val uiState: StateFlow<HistoryUiState> = combine(range, allDays, settingsRepository.goals, ::HistoryUiState)
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
+    val uiState: StateFlow<HistoryUiState> = combine(range, allDays, settingsRepository.goals, weights, settingsRepository.profile) {
+            r, days, goals, weighIns, profile ->
+        HistoryUiState(r, days, goals, weighIns, profile?.weightKg)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
+
+    /** Saves a weigh-in; when editing one and its date changed, the old one is replaced. */
+    fun saveWeight(original: WeightEntry?, date: LocalDate, weightKg: Double) {
+        viewModelScope.launch {
+            if (original != null && original.date != date) weightRepository.delete(original)
+            weightRepository.log(date, weightKg)
+        }
+    }
+
+    fun deleteWeight(entry: WeightEntry) {
+        viewModelScope.launch { weightRepository.delete(entry) }
+    }
+
+    fun restoreWeight(entry: WeightEntry) {
+        viewModelScope.launch { weightRepository.restore(entry) }
+    }
 
     fun setRange(value: HistoryRange) {
         range.value = value
@@ -92,6 +123,6 @@ class HistoryViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { HistoryViewModel(it.logRepository, it.settingsRepository, it.diaryDate) }
+        val Factory = appViewModelFactory { HistoryViewModel(it.logRepository, it.settingsRepository, it.weightRepository, it.diaryDate) }
     }
 }

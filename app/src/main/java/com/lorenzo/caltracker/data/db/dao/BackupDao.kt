@@ -12,6 +12,7 @@ import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Profile
 import com.lorenzo.caltracker.data.db.entity.Recipe
 import com.lorenzo.caltracker.data.db.entity.RecipeIngredient
+import com.lorenzo.caltracker.data.db.entity.WeightEntry
 
 /** Bulk read and replace of every table, for backup and restore. */
 @Dao
@@ -22,6 +23,7 @@ abstract class BackupDao {
     @Query("SELECT * FROM log_entries") abstract suspend fun logEntries(): List<LogEntry>
     @Query("SELECT * FROM profile WHERE id = 1") abstract suspend fun profile(): Profile?
     @Query("SELECT * FROM goals WHERE id = 1") abstract suspend fun goals(): Goals?
+    @Query("SELECT * FROM weight_entries") abstract suspend fun weightEntries(): List<WeightEntry>
 
     @Query("DELETE FROM log_entries") protected abstract suspend fun clearLogEntries()
     @Query("DELETE FROM recipe_ingredients") protected abstract suspend fun clearRecipeIngredients()
@@ -29,6 +31,7 @@ abstract class BackupDao {
     @Query("DELETE FROM foods") protected abstract suspend fun clearFoods()
     @Query("DELETE FROM profile") protected abstract suspend fun clearProfile()
     @Query("DELETE FROM goals") protected abstract suspend fun clearGoals()
+    @Query("DELETE FROM weight_entries") protected abstract suspend fun clearWeightEntries()
 
     @Insert protected abstract suspend fun insertFoods(items: List<Food>)
     @Insert protected abstract suspend fun insertRecipes(items: List<Recipe>)
@@ -36,6 +39,7 @@ abstract class BackupDao {
     @Insert protected abstract suspend fun insertLogEntries(items: List<LogEntry>)
     @Insert protected abstract suspend fun insertProfile(profile: Profile)
     @Insert protected abstract suspend fun insertGoals(goals: Goals)
+    @Insert protected abstract suspend fun insertWeightEntries(items: List<WeightEntry>)
 
     /** Deletes everything and inserts the backup's rows, keeping their ids. All or nothing. */
     @Transaction
@@ -46,6 +50,7 @@ abstract class BackupDao {
         clearFoods()
         clearProfile()
         clearGoals()
+        clearWeightEntries()
 
         insertFoods(backup.foods)
         insertRecipes(backup.recipes)
@@ -53,6 +58,7 @@ abstract class BackupDao {
         insertLogEntries(backup.logEntries)
         backup.profile?.let { insertProfile(it) }
         backup.goals?.let { insertGoals(it) }
+        insertWeightEntries(backup.weightEntries)
         if (backup.schemaVersion < 2) markQuickAdds()
     }
 

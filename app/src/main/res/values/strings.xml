@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">CalTracker</string>
+    <string name="widget_description">Calories and macros eaten today</string>
 </resources>

@@ -25,7 +25,7 @@ import com.lorenzo.caltracker.ui.components.DecimalField
 import com.lorenzo.caltracker.ui.components.TimeField
 import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.formatWhole
-import com.lorenzo.caltracker.ui.label
+import com.lorenzo.caltracker.ui.unitLabel
 import com.lorenzo.caltracker.ui.toDecimalOrNull
 import java.time.LocalTime
 
@@ -42,6 +42,7 @@ fun EditEntryDialog(
     onDuplicate: () -> Unit,
     onCopyTo: () -> Unit,
     onMoveTo: () -> Unit,
+    onSplit: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var time by remember { mutableStateOf(entry.time) }
@@ -78,7 +79,7 @@ fun EditEntryDialog(
                         value = amount,
                         onValueChange = { amount = it },
                         label = "Amount",
-                        suffix = entry.unit.label(parsedAmount ?: entry.amount),
+                        suffix = entry.unitLabel(parsedAmount ?: entry.amount),
                         isError = parsedAmount == null || parsedAmount <= 0,
                         modifier = Modifier.fillMaxWidth(),
                     )
@@ -95,6 +96,7 @@ fun EditEntryDialog(
                     TextButton(onClick = onDuplicate) { Text("Duplicate") }
                     TextButton(onClick = onCopyTo) { Text("Copy to another day…") }
                     TextButton(onClick = onMoveTo) { Text("Move to another day…") }
+                    if (entry.recipeId != null) TextButton(onClick = onSplit) { Text("Split into ingredients") }
                     TextButton(
                         onClick = onDelete,
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),

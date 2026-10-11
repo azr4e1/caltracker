@@ -1,5 +1,6 @@
 package com.lorenzo.caltracker.ui.navigation
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -15,6 +16,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -41,6 +43,7 @@ import com.lorenzo.caltracker.ui.recipe.RecipeEditorScreen
 import com.lorenzo.caltracker.ui.recipe.RecipeEditorViewModel
 import com.lorenzo.caltracker.ui.quickadd.QuickAddViewModel
 import com.lorenzo.caltracker.ui.settings.SettingsScreen
+import java.time.LocalDate
 import kotlin.reflect.KClass
 import kotlinx.serialization.json.Json
 
@@ -81,7 +84,14 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
             modifier = Modifier.padding(padding),
         ) {
             composable<DiaryRoute> {
-                DiaryScreen(onAddFood = { date -> navController.navigate(AddFoodRoute(date.toEpochDay())) })
+                DiaryScreen(
+                    onAddFood = { date -> navController.navigate(AddFoodRoute(date.toEpochDay())) },
+                    onCreateRecipe = { ids ->
+                        navController.navigate(
+                            RecipeEditorRoute(epochDay = LocalDate.now().toEpochDay(), fromEntryIds = ids.joinToString(","), logAfterSave = false),
+                        )
+                    },
+                )
             }
             composable<HistoryRoute> { HistoryScreen(onOpenDay = { navController.navigateToTab(DiaryRoute) }) }
             composable<SettingsRoute> {
@@ -92,7 +102,9 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
             }
             composable<RecipeEditorRoute> { entry ->
                 val route = entry.toRoute<RecipeEditorRoute>()
-                val viewModel: RecipeEditorViewModel = viewModel(factory = RecipeEditorViewModel.factory(route.recipeId))
+                val fromEntries = route.fromEntryIds?.split(',')?.mapNotNull { it.toLongOrNull() }.orEmpty()
+                val viewModel: RecipeEditorViewModel = viewModel(factory = RecipeEditorViewModel.factory(route.recipeId, fromEntries))
+                val context = LocalContext.current
                 // A food chosen in the picker comes back through this entry's saved state.
                 val picked by entry.savedStateHandle.getStateFlow<Long?>(PICKED_FOOD_ID, null).collectAsStateWithLifecycle()
                 LaunchedEffect(picked) {
@@ -103,10 +115,14 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                 }
                 RecipeEditorScreen(
                     viewModel = viewModel,
+                    logAfterSave = route.logAfterSave,
                     onAddIngredient = { navController.navigate(AddFoodRoute(route.epochDay, forRecipe = true)) },
                     onBack = navController::popBackStack,
                     onSaved = { recipeId ->
-                        if (route.recipeId == 0L) {
+                        if (!route.logAfterSave) {
+                            Toast.makeText(context, "Recipe saved", Toast.LENGTH_SHORT).show()
+                            navController.popBackStack()
+                        } else if (route.recipeId == 0L) {
                             navController.navigate(LogRecipeRoute(recipeId, route.epochDay)) {
                                 popUpTo<RecipeEditorRoute> { inclusive = true }
                             }
