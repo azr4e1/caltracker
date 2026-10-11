@@ -8,6 +8,11 @@ plugins {
     alias(libs.plugins.room)
 }
 
+// Release signing details live in keystore.properties (not in git). Without it, release builds are unsigned.
+val keystoreProperties = Properties().apply {
+    rootProject.file("keystore.properties").takeIf { it.exists() }?.inputStream()?.use { load(it) }
+}
+
 android {
     namespace = "com.lorenzo.caltracker"
     compileSdk = 37
@@ -17,7 +22,7 @@ android {
         minSdk = 31
         targetSdk = 36
         versionCode = 1
-        versionName = "0.1.0"
+        versionName = "1.0.0"
 
         // Free key from https://fdc.nal.usda.gov/api-key-signup ; DEMO_KEY works but is heavily rate-limited.
         val localProperties = Properties().apply {
@@ -26,10 +31,24 @@ android {
         buildConfigField("String", "USDA_API_KEY", "\"${localProperties.getProperty("usda.apiKey", "DEMO_KEY")}\"")
     }
 
+    signingConfigs {
+        if (!keystoreProperties.isEmpty) {
+            create("release") {
+                storeFile = file(keystoreProperties.getProperty("storeFile"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
+            // R8 shrinks and optimizes the code; unused resources are removed too.
             isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.findByName("release")
         }
         debug {
             applicationIdSuffix = ".debug"

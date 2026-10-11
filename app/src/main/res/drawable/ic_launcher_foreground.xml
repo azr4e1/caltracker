@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Adaptive icon foreground (108dp canvas, content kept inside the central 66dp safe zone):
+     a calorie ring, mostly filled, around a fork and knife. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Ring track -->
+    <path
+        android:pathData="M54,30a24,24 0 1,1 0,48a24,24 0 1,1 0,-48"
+        android:strokeWidth="6"
+        android:strokeColor="#59FFFFFF" />
+    <!-- Ring progress: 300° clockwise from the top -->
+    <path
+        android:pathData="M54,30A24,24 0 1,1 33.22,42"
+        android:strokeWidth="6"
+        android:strokeColor="#FFFFFFFF"
+        android:strokeLineCap="round" />
+    <!-- Fork and knife, scaled from a 24-unit glyph and centred -->
+    <group
+        android:scaleX="1.05"
+        android:scaleY="1.05"
+        android:translateX="41.4"
+        android:translateY="41.4">
+        <path
+            android:fillColor="#FFFFFFFF"
+            android:pathData="M11,9H9V2H7v7H5V2H3v7c0,2.12 1.66,3.84 3.75,3.97V22h2.5v-9.03C11.34,12.84 13,11.12 13,9V2h-2V9zM16,6v8h2.5v8H21V2C18.24,2 16,4.24 16,6z" />
+    </group>
+</vector>
