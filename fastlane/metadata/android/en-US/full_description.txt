@@ -1,7 +1,7 @@
 <p>CalTracker is a calorie and macro tracker that keeps your data on your phone.</p>
 <p><b>Log food quickly</b></p>
 <ul>
-<li>Search your saved foods, Open Food Facts (packaged products) and USDA FoodData Central (generic foods)</li>
+<li>Search your saved foods, Open Food Facts (packaged products) and USDA FoodData Central (generic foods; add your own free API key in Settings for more searches)</li>
 <li>Scan barcodes</li>
 <li>Quick add calories and macros without creating a food</li>
 <li>Recipes: group foods, log portions or grams, split a logged recipe back into its ingredients, or turn selected entries into a recipe</li>

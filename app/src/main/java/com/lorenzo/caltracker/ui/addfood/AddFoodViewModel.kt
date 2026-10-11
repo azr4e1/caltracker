@@ -83,6 +83,9 @@ class AddFoodViewModel(
     /** One-off message to show in a snackbar. */
     var message by mutableStateOf<String?>(null)
 
+    /** USDA searches use the shared key, so rate-limit errors should suggest adding one's own. */
+    val usesSharedUsdaKey: Boolean get() = onlineFoods.usesSharedUsdaKey
+
     fun setQuery(value: String) {
         query.value = value
     }

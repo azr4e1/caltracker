@@ -13,6 +13,8 @@ A calorie and macro tracker for Android that keeps your data on your phone. No a
 
 - **Timeline diary.** Every entry has a time; no breakfast/lunch/dinner boxes. Swipe between days.
 - **Find food fast.** Search your saved foods, [Open Food Facts](https://world.openfoodfacts.org) (packaged products) and [USDA FoodData Central](https://fdc.nal.usda.gov) (generic foods), or scan a barcode. Unknown products open a pre-filled form.
+
+> **Tip:** USDA search uses a shared key that allows only a few searches per hour. Get your own [free key](https://fdc.nal.usda.gov/api-key-signup) (1,000 searches per hour) and add it in **Settings → Food search**.
 - **Quick add** calories and macros without creating a food.
 - **Recipes.** Group foods, log portions or grams (with an optional cooked weight), split a logged recipe back into ingredients, or turn selected diary entries into a recipe.
 - **Edit the diary freely.** Change amounts and times, duplicate, copy or move entries to another day, copy a whole day, undo deletes.
@@ -42,7 +44,7 @@ cd caltracker
 
 Optional settings in `local.properties` and `keystore.properties` (both git-ignored):
 
-- `usda.apiKey=...` — your own [USDA API key](https://fdc.nal.usda.gov/api-key-signup) (free). Without it the shared, heavily rate-limited `DEMO_KEY` is used.
+- `usda.apiKey=...` — a [USDA API key](https://fdc.nal.usda.gov/api-key-signup) built into your builds. Without it, USDA's shared, heavily rate-limited `DEMO_KEY` is used.
 - `keystore.properties` with `storeFile`, `storePassword`, `keyAlias`, `keyPassword` — signs release builds. Without it, release builds are unsigned.
 
 Built with Kotlin, Jetpack Compose, Room, Glance and fastexcel.

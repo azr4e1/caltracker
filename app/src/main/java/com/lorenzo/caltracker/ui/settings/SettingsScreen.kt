@@ -81,9 +81,26 @@ fun SettingsScreen(
         ) {
             ProfileCard(state.profile, onClick = onEditProfile)
             GoalsCard(state.goals, state.profile, onClick = onEditGoals)
+            val usdaKey by viewModel.usdaApiKey.collectAsStateWithLifecycle()
+            SummaryCard(
+                "Food search",
+                listOf("USDA API key" to (usdaKey?.let { "Your key ••••${it.takeLast(4)}" } ?: "Shared (limited)")),
+                onClick = viewModel::openUsdaKey,
+            )
             BackupSection(viewModel)
             DeleteDataSection(onDelete = { viewModel.deleteAllData(onDataDeleted) })
         }
+    }
+
+    if (viewModel.editingUsdaKey) {
+        UsdaKeyDialog(
+            currentKey = viewModel.usdaApiKey.collectAsStateWithLifecycle().value,
+            checking = viewModel.checkingUsdaKey,
+            error = viewModel.usdaKeyError,
+            onDismiss = { viewModel.editingUsdaKey = false },
+            onSave = viewModel::saveUsdaKey,
+            onUseShared = viewModel::useSharedUsdaKey,
+        )
     }
 }
 

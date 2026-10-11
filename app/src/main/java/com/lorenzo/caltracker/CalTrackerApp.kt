@@ -15,6 +15,7 @@ import com.lorenzo.caltracker.data.repository.DiaryDateHolder
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.data.repository.OnlineFoodRepository
+import com.lorenzo.caltracker.data.repository.PreferencesRepository
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
 import com.lorenzo.caltracker.data.repository.WeightRepository
@@ -31,7 +32,8 @@ class AppContainer(app: Application) {
         ExportRepository(app, logRepository, foodRepository, recipeRepository, settingsRepository, weightRepository)
     }
     val weightRepository: WeightRepository by lazy { WeightRepository(database.weightDao(), settingsRepository) }
-    val onlineFoodRepository: OnlineFoodRepository by lazy { OnlineFoodRepository(foodRepository) }
+    val onlineFoodRepository: OnlineFoodRepository by lazy { OnlineFoodRepository(foodRepository, preferencesRepository) }
+    val preferencesRepository: PreferencesRepository by lazy { PreferencesRepository(app) }
     val diaryDate = DiaryDateHolder()
 }
 

@@ -139,7 +139,10 @@ fun AddFoodScreen(
                 if (state.query.isNotBlank()) {
                     if (!pickingIngredient && state.recipes.isNotEmpty()) recipeSection(state.recipes, onRecipeSelected, onNewRecipe)
                     savedFoodSection("Your foods", state.results, onFoodSelected, empty = "No saved food matches.")
-                    onlineSection(state.query.trim(), viewModel.online, expandedSections, { expandedSections = expandedSections + it }, ::search) { viewModel.choose(it, handler) }
+                    onlineSection(
+                        state.query.trim(), viewModel.online, expandedSections, { expandedSections = expandedSections + it }, ::search,
+                        viewModel.usesSharedUsdaKey,
+                    ) { viewModel.choose(it, handler) }
                 } else {
                     if (state.recent.isNotEmpty()) savedFoodSection("Recent", state.recent, onFoodSelected)
                     if (!pickingIngredient) recipeSection(state.recipes, onRecipeSelected, onNewRecipe)
@@ -232,11 +235,12 @@ private fun LazyListScope.onlineSection(
     expanded: Set<String>,
     onExpand: (String) -> Unit,
     onSearch: () -> Unit,
+    sharedUsdaKey: Boolean,
     onChoose: (RemoteFood) -> Unit,
 ) {
     if (online != null && online.query == query) {
         remoteSection("Products · Open Food Facts", online.products, expanded, onExpand, onChoose)
-        remoteSection("Generic foods · USDA", online.generic, expanded, onExpand, onChoose)
+        remoteSection("Generic foods · USDA", online.generic, expanded, onExpand, onChoose, sharedUsdaKey)
     } else if (query.length >= 2) {
         item(key = "online-button") {
             OutlinedButton(onClick = onSearch, modifier = Modifier.fillMaxWidth().padding(16.dp)) {
@@ -254,6 +258,7 @@ private fun LazyListScope.remoteSection(
     expanded: Set<String>,
     onExpand: (String) -> Unit,
     onChoose: (RemoteFood) -> Unit,
+    sharedKey: Boolean = false,
 ) {
     sectionHeader(title, title)
     if (result == null) {
@@ -262,7 +267,7 @@ private fun LazyListScope.remoteSection(
         }
         return
     }
-    result.onFailure { message("error-$title", searchError(it)) }
+    result.onFailure { message("error-$title", searchError(it, sharedKey)) }
     result.onSuccess { foods ->
         if (foods.isEmpty()) message("empty-$title", "No results.")
         val shown = if (title in expanded) foods else foods.take(COLLAPSED_RESULTS)
@@ -287,7 +292,10 @@ private fun LazyListScope.remoteSection(
     }
 }
 
-private fun searchError(error: Throwable): String = when {
+private fun searchError(error: Throwable, sharedKey: Boolean = false): String = when {
+    error.message?.contains("429") == true && sharedKey ->
+        "The shared USDA key is busy. Try again later, or add your own free key in Settings."
     error.message?.contains("429") == true -> "Too many searches right now. Try again in a minute."
+    error.message?.contains("403") == true -> "USDA rejected the API key. Check it in Settings."
     else -> "Couldn't search: check your connection."
 }

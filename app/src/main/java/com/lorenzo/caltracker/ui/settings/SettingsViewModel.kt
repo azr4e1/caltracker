@@ -10,7 +10,10 @@ import com.lorenzo.caltracker.data.backup.BackupRepository
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.export.ExportRepository
 import com.lorenzo.caltracker.data.db.entity.Profile
+import com.lorenzo.caltracker.data.repository.OnlineFoodRepository
+import com.lorenzo.caltracker.data.repository.PreferencesRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
+import com.lorenzo.caltracker.data.repository.UsdaKeyCheck
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -24,7 +27,49 @@ class SettingsViewModel(
     settingsRepository: SettingsRepository,
     private val backupRepository: BackupRepository,
     private val exportRepository: ExportRepository,
+    private val preferences: PreferencesRepository,
+    private val onlineFoods: OnlineFoodRepository,
 ) : ViewModel() {
+    /** The user's own USDA key, or null when the shared one is used. */
+    val usdaApiKey: StateFlow<String?> = preferences.usdaApiKey
+
+    var editingUsdaKey by mutableStateOf(false)
+    var checkingUsdaKey by mutableStateOf(false)
+        private set
+    var usdaKeyError by mutableStateOf<String?>(null)
+        private set
+
+    fun openUsdaKey() {
+        usdaKeyError = null
+        editingUsdaKey = true
+    }
+
+    /** Checks the key with USDA, then saves it unless USDA rejects it. */
+    fun saveUsdaKey(key: String) {
+        checkingUsdaKey = true
+        usdaKeyError = null
+        viewModelScope.launch {
+            val check = onlineFoods.checkUsdaKey(key)
+            checkingUsdaKey = false
+            if (check == UsdaKeyCheck.Invalid) {
+                usdaKeyError = "USDA didn't accept this key. Check it was copied completely."
+                return@launch
+            }
+            preferences.setUsdaApiKey(key)
+            editingUsdaKey = false
+            message = when (check) {
+                is UsdaKeyCheck.Unverified -> "USDA key saved, but not checked yet: ${check.reason}"
+                else -> "USDA key saved and working"
+            }
+        }
+    }
+
+    fun useSharedUsdaKey() {
+        preferences.setUsdaApiKey(null)
+        editingUsdaKey = false
+        message = "Using the shared USDA key"
+    }
+
     val uiState: StateFlow<SettingsUiState> =
         combine(settingsRepository.profile, settingsRepository.goals, ::SettingsUiState)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), SettingsUiState())
@@ -61,6 +106,8 @@ class SettingsViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { SettingsViewModel(it.settingsRepository, it.backupRepository, it.exportRepository) }
+        val Factory = appViewModelFactory { SettingsViewModel(
+                it.settingsRepository, it.backupRepository, it.exportRepository, it.preferencesRepository, it.onlineFoodRepository,
+            ) }
     }
 }

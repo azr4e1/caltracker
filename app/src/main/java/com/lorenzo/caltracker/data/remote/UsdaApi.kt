@@ -22,10 +22,13 @@ object UsdaApi {
     private const val SATURATED_FAT = 1258
     private const val SODIUM_MG = 1093
 
-    suspend fun search(query: String): List<RemoteFood> {
+    /** Key built into the app: from local.properties at build time, otherwise USDA's shared DEMO_KEY. */
+    const val BUILT_IN_KEY: String = BuildConfig.USDA_API_KEY
+
+    suspend fun search(query: String, apiKey: String = BUILT_IN_KEY): List<RemoteFood> {
         val json = getJson(
             "https://api.nal.usda.gov/fdc/v1/foods/search?query=${encode(query)}" +
-                "&dataType=Foundation,SR%20Legacy&pageSize=25&api_key=${BuildConfig.USDA_API_KEY}",
+                "&dataType=Foundation,SR%20Legacy&pageSize=25&api_key=${encode(apiKey)}",
         )
         return parseSearchResponse(json)
     }
