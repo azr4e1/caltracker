@@ -7,6 +7,7 @@ import com.lorenzo.caltracker.data.export.ExportRepository
 import com.lorenzo.caltracker.data.repository.DiaryDateHolder
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.LogRepository
+import com.lorenzo.caltracker.data.repository.OnlineFoodRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
 
 /** Holds the app-wide singletons. Screens get their dependencies from here. */
@@ -19,6 +20,7 @@ class AppContainer(app: Application) {
     val exportRepository: ExportRepository by lazy {
         ExportRepository(app, logRepository, foodRepository, settingsRepository)
     }
+    val onlineFoodRepository: OnlineFoodRepository by lazy { OnlineFoodRepository(foodRepository) }
     val diaryDate = DiaryDateHolder()
 }
 

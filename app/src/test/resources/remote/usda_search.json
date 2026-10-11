@@ -1,0 +1,151 @@
+{
+ "foods": [
+  {
+   "fdcId": 173945,
+   "description": "Bananas, dehydrated, or banana powder",
+   "dataType": "SR Legacy",
+   "foodNutrients": [
+    {
+     "nutrientId": 1003,
+     "nutrientName": "Protein",
+     "value": 3.89,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1093,
+     "nutrientName": "Sodium, Na",
+     "value": 3.0,
+     "unitName": "MG"
+    },
+    {
+     "nutrientId": 1258,
+     "nutrientName": "Fatty acids, total saturated",
+     "value": 0.698,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1004,
+     "nutrientName": "Total lipid (fat)",
+     "value": 1.81,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1005,
+     "nutrientName": "Carbohydrate, by difference",
+     "value": 88.3,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1008,
+     "nutrientName": "Energy",
+     "value": 346,
+     "unitName": "KCAL"
+    },
+    {
+     "nutrientId": 2000,
+     "nutrientName": "Total Sugars",
+     "value": 47.3,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1079,
+     "nutrientName": "Fiber, total dietary",
+     "value": 9.9,
+     "unitName": "G"
+    }
+   ]
+  },
+  {
+   "fdcId": 173944,
+   "description": "Bananas, raw",
+   "dataType": "SR Legacy",
+   "foodNutrients": [
+    {
+     "nutrientId": 1258,
+     "nutrientName": "Fatty acids, total saturated",
+     "value": 0.112,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1005,
+     "nutrientName": "Carbohydrate, by difference",
+     "value": 22.8,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1008,
+     "nutrientName": "Energy",
+     "value": 89.0,
+     "unitName": "KCAL"
+    },
+    {
+     "nutrientId": 1079,
+     "nutrientName": "Fiber, total dietary",
+     "value": 2.6,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1093,
+     "nutrientName": "Sodium, Na",
+     "value": 1.0,
+     "unitName": "MG"
+    },
+    {
+     "nutrientId": 1003,
+     "nutrientName": "Protein",
+     "value": 1.09,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 2000,
+     "nutrientName": "Total Sugars",
+     "value": 12.2,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1004,
+     "nutrientName": "Total lipid (fat)",
+     "value": 0.33,
+     "unitName": "G"
+    }
+   ]
+  },
+  {
+   "fdcId": 1105073,
+   "description": "Bananas, overripe, raw",
+   "dataType": "Foundation",
+   "foodNutrients": [
+    {
+     "nutrientId": 1004,
+     "nutrientName": "Total lipid (fat)",
+     "value": 0.22,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1079,
+     "nutrientName": "Fiber, total dietary",
+     "value": 1.7,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1003,
+     "nutrientName": "Protein",
+     "value": 0.73,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1005,
+     "nutrientName": "Carbohydrate, by difference",
+     "value": 20.1,
+     "unitName": "G"
+    },
+    {
+     "nutrientId": 1008,
+     "nutrientName": "Energy",
+     "value": 85.0,
+     "unitName": "KCAL"
+    }
+   ]
+  }
+ ]
+}

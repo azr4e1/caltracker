@@ -23,6 +23,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
+import com.lorenzo.caltracker.data.remote.RemoteFood
 import com.lorenzo.caltracker.ui.addfood.AddFoodScreen
 import com.lorenzo.caltracker.ui.diary.DiaryScreen
 import com.lorenzo.caltracker.ui.foodeditor.FoodEditorScreen
@@ -35,6 +36,7 @@ import com.lorenzo.caltracker.ui.quickadd.QuickAddScreen
 import com.lorenzo.caltracker.ui.quickadd.QuickAddViewModel
 import com.lorenzo.caltracker.ui.settings.SettingsScreen
 import kotlin.reflect.KClass
+import kotlinx.serialization.json.Json
 
 private enum class Tab(val route: Any, val routeClass: KClass<*>, val label: String, val icon: ImageVector) {
     DIARY(DiaryRoute, DiaryRoute::class, "Diary", Icons.Filled.Home),
@@ -106,6 +108,9 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                 AddFoodScreen(
                     onBack = navController::popBackStack,
                     onFoodSelected = { foodId -> navController.navigate(LogFoodRoute(foodId, route.epochDay)) },
+                    onEditDraft = { draft ->
+                        navController.navigate(NewFoodRoute(route.epochDay, Json.encodeToString(RemoteFood.serializer(), draft)))
+                    },
                     onQuickAdd = { navController.navigate(QuickAddRoute(route.epochDay)) },
                     onNewFood = { navController.navigate(NewFoodRoute(route.epochDay)) },
                 )
@@ -129,8 +134,9 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
             }
             composable<NewFoodRoute> { entry ->
                 val route = entry.toRoute<NewFoodRoute>()
+                val draft = route.draftJson?.let { Json.decodeFromString(RemoteFood.serializer(), it) }
                 FoodEditorScreen(
-                    viewModel = viewModel(factory = FoodEditorViewModel.factory(foodId = null)),
+                    viewModel = viewModel(factory = FoodEditorViewModel.factory(foodId = null, draft = draft)),
                     onBack = navController::popBackStack,
                     onSaved = { foodId ->
                         // Replace the editor with the log screen, so Back returns to the food list.

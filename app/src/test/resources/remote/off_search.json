@@ -1,0 +1,97 @@
+{
+ "hits": [
+  {
+   "code": "8017596079480",
+   "brands": [
+    "Land",
+    " Eurospin"
+   ],
+   "nutriments": {
+    "carbohydrates_100g": 4,
+    "energy-kcal_100g": 70,
+    "fat_100g": 2,
+    "proteins_100g": 9,
+    "salt_100g": 0.18,
+    "saturated-fat_100g": 1.2,
+    "sodium_100g": 0.072,
+    "sugars_100g": 4
+   },
+   "product_name": "Yogurt greco bianco"
+  },
+  {
+   "code": "8017596124081",
+   "brands": [
+    "Eurospin"
+   ],
+   "nutriments": {
+    "carbohydrates_100g": 14.6,
+    "energy-kcal_100g": 90,
+    "energy-kj_100g": 384,
+    "fat_100g": 0,
+    "fiber_100g": 0,
+    "proteins_100g": 7.9,
+    "salt_100g": 0.18,
+    "saturated-fat_100g": 0,
+    "sodium_100g": 0.072,
+    "sugars_100g": 13.8
+   },
+   "product_name": "Yogurt greco limone"
+  },
+  {
+   "code": "8017596124074",
+   "brands": [
+    "Eurospin"
+   ],
+   "nutriments": {
+    "carbohydrates_100g": 14.3,
+    "energy-kcal_100g": 107,
+    "energy-kj_100g": 453,
+    "fat_100g": 2,
+    "fiber_100g": 0.2,
+    "proteins_100g": 7.9,
+    "salt_100g": 0.15,
+    "saturated-fat_100g": 1.2,
+    "sodium_100g": 0.06,
+    "sugars_100g": 13.7
+   },
+   "product_name": "Yogurt greco stracciatella"
+  },
+  {
+   "code": "8001300660637",
+   "brands": [
+    "Despar"
+   ],
+   "nutriments": {
+    "carbohydrates_100g": 3.9,
+    "energy-kcal_100g": 72,
+    "fat_100g": 2,
+    "fiber_100g": 0,
+    "proteins_100g": 9.5,
+    "salt_100g": 0.1975,
+    "saturated-fat_100g": 1.4,
+    "sodium_100g": 0.079,
+    "sugars_100g": 3.9
+   },
+   "product_name": "yogurt greco"
+  },
+  {
+   "code": "5201037712439",
+   "brands": [
+    "Delta"
+   ],
+   "nutriments": {
+    "carbohydrates_100g": 3.8,
+    "energy-kcal_100g": 57,
+    "energy-kj_100g": 243,
+    "fat_100g": 0.1,
+    "fiber_100g": 0,
+    "proteins_100g": 9.6,
+    "salt_100g": 0.12,
+    "saturated-fat_100g": 0,
+    "sodium_100g": 0.048,
+    "sugars_100g": 3.8
+   },
+   "product_name": "Yogurt greco autentici"
+  }
+ ]
+}

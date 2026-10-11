@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,6 +19,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
@@ -25,7 +28,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.lorenzo.caltracker.data.db.entity.BaseUnit
 import com.lorenzo.caltracker.ui.components.DecimalField
@@ -38,7 +44,15 @@ import kotlin.math.abs
 fun FoodEditorScreen(viewModel: FoodEditorViewModel, onBack: () -> Unit, onSaved: (Long) -> Unit) {
     val vm = viewModel
     val unit = if (vm.baseUnit == BaseUnit.ML) "ml" else "g"
+    val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(vm.message) {
+        vm.message?.let {
+            snackbarHostState.showSnackbar(it)
+            vm.message = null
+        }
+    }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(if (vm.isEditing) "Edit food" else "New food") },
@@ -112,6 +126,15 @@ fun FoodEditorScreen(viewModel: FoodEditorViewModel, onBack: () -> Unit, onSaved
                 )
                 DecimalField(vm.servingSize, { vm.servingSize = it }, "Size", suffix = unit, modifier = Modifier.weight(1f))
             }
+
+            OutlinedTextField(
+                vm.barcode,
+                { new -> if (new.all(Char::isDigit)) vm.barcode = new },
+                label = { Text("Barcode (optional)") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+            )
 
             Button(onClick = { vm.save(onSaved) }, enabled = vm.isValid, modifier = Modifier.fillMaxWidth()) {
                 Text(if (vm.isEditing) "Save" else "Save and log")

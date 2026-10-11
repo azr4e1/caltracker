@@ -6,6 +6,7 @@ import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Update
 import com.lorenzo.caltracker.data.db.entity.Food
+import com.lorenzo.caltracker.data.db.entity.FoodSource
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -15,6 +16,9 @@ interface FoodDao {
 
     @Query("SELECT * FROM foods WHERE id = :id")
     fun observeById(id: Long): Flow<Food?>
+
+    @Query("SELECT * FROM foods WHERE source = :source AND externalId = :externalId LIMIT 1")
+    suspend fun getByExternalId(source: FoodSource, externalId: String): Food?
 
     @Query("SELECT * FROM foods WHERE barcode = :barcode")
     suspend fun getByBarcode(barcode: String): Food?

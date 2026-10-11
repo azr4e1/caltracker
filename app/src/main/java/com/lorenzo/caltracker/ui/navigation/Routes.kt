@@ -22,9 +22,12 @@ data class LogFoodRoute(val foodId: Long, val epochDay: Long)
 @Serializable
 data class QuickAddRoute(val epochDay: Long)
 
-/** Creates a food, then opens it for logging on [epochDay]. */
+/**
+ * Creates a food, then opens it for logging on [epochDay].
+ * [draftJson] optionally pre-fills the form with a JSON-encoded RemoteFood (scanned or searched).
+ */
 @Serializable
-data class NewFoodRoute(val epochDay: Long)
+data class NewFoodRoute(val epochDay: Long, val draftJson: String? = null)
 
 @Serializable
 data class EditFoodRoute(val foodId: Long)

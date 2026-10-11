@@ -1,5 +1,6 @@
 package com.lorenzo.caltracker.ui.foodeditor
 
+import android.database.sqlite.SQLiteConstraintException
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -7,6 +8,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lorenzo.caltracker.data.db.entity.BaseUnit
 import com.lorenzo.caltracker.data.db.entity.Food
+import com.lorenzo.caltracker.data.remote.RemoteFood
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.domain.GoalCalculator
 import com.lorenzo.caltracker.ui.appViewModelFactory
@@ -15,11 +17,15 @@ import com.lorenzo.caltracker.ui.toDecimalOrNull
 import kotlinx.coroutines.launch
 
 /**
- * Form for creating a food, or editing one when [foodId] is set.
- * Nutrient values are per 100 g (or 100 ml).
+ * Form for creating a food, or editing one when [foodId] is set. A [draft] (from a scan or an
+ * online search with missing values) pre-fills a new food. Nutrient values are per 100 g (or 100 ml).
  */
-class FoodEditorViewModel(private val foodId: Long?, private val foodRepository: FoodRepository) : ViewModel() {
-    private var original: Food? = null
+class FoodEditorViewModel(
+    private val foodId: Long?,
+    draft: RemoteFood?,
+    private val foodRepository: FoodRepository,
+) : ViewModel() {
+    private var original: Food? = draft?.toFood()?.let { it.copy(externalId = it.externalId?.ifEmpty { null }) }
 
     val isEditing: Boolean get() = foodId != null
 
@@ -36,8 +42,28 @@ class FoodEditorViewModel(private val foodId: Long?, private val foodRepository:
     var salt by mutableStateOf("")
     var servingName by mutableStateOf("")
     var servingSize by mutableStateOf("")
+    var barcode by mutableStateOf("")
+
+    /** Error to show in a snackbar. */
+    var message by mutableStateOf<String?>(null)
 
     init {
+        if (draft != null) {
+            name = draft.name
+            brand = draft.brand.orEmpty()
+            barcode = draft.barcode.orEmpty()
+            baseUnit = draft.baseUnit
+            kcal = draft.kcal?.formatAmount().orEmpty()
+            protein = draft.protein?.formatAmount().orEmpty()
+            carbs = draft.carbs?.formatAmount().orEmpty()
+            fat = draft.fat?.formatAmount().orEmpty()
+            fiber = draft.fiber?.formatAmount().orEmpty()
+            sugar = draft.sugar?.formatAmount().orEmpty()
+            saturatedFat = draft.saturatedFat?.formatAmount().orEmpty()
+            salt = draft.salt?.formatAmount().orEmpty()
+            servingSize = draft.servingSize?.formatAmount().orEmpty()
+            servingName = if (draft.servingSize != null) "serving" else ""
+        }
         if (foodId != null) {
             viewModelScope.launch {
                 val f = foodRepository.get(foodId) ?: return@launch
@@ -55,6 +81,7 @@ class FoodEditorViewModel(private val foodId: Long?, private val foodRepository:
                 salt = f.saltPer100?.formatAmount().orEmpty()
                 servingName = f.servingName.orEmpty()
                 servingSize = f.servingSize?.formatAmount().orEmpty()
+                barcode = f.barcode.orEmpty()
             }
         }
     }
@@ -83,7 +110,7 @@ class FoodEditorViewModel(private val foodId: Long?, private val foodRepository:
     fun save(onSaved: (Long) -> Unit) {
         if (!isValid) return
         if (isEditing && original == null) return
-        // Editing keeps the id, barcode, source and creation time of the original.
+        // Editing keeps the id, source and creation time of the original.
         val base = original ?: Food(name = "", kcalPer100 = 0.0, proteinPer100 = 0.0, carbsPer100 = 0.0, fatPer100 = 0.0)
         val food = base.copy(
             name = name.trim(),
@@ -99,18 +126,24 @@ class FoodEditorViewModel(private val foodId: Long?, private val foodRepository:
             saltPer100 = optional(salt),
             servingName = servingName.trim().ifEmpty { null }?.takeIf { servingSize.isNotBlank() },
             servingSize = optional(servingSize),
+            barcode = barcode.trim().ifEmpty { null },
         )
         viewModelScope.launch {
-            if (isEditing) {
-                foodRepository.update(food)
-                onSaved(food.id)
-            } else {
-                onSaved(foodRepository.add(food))
+            try {
+                if (isEditing) {
+                    foodRepository.update(food)
+                    onSaved(food.id)
+                } else {
+                    onSaved(foodRepository.add(food))
+                }
+            } catch (e: SQLiteConstraintException) {
+                message = "Another saved food already has barcode ${food.barcode}."
             }
         }
     }
 
     companion object {
-        fun factory(foodId: Long?) = appViewModelFactory { FoodEditorViewModel(foodId, it.foodRepository) }
+        fun factory(foodId: Long?, draft: RemoteFood? = null) =
+            appViewModelFactory { FoodEditorViewModel(foodId, draft, it.foodRepository) }
     }
 }

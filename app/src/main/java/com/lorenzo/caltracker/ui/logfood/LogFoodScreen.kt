@@ -37,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.lorenzo.caltracker.data.db.entity.BaseUnit
 import com.lorenzo.caltracker.data.db.entity.EntryUnit
+import com.lorenzo.caltracker.data.db.entity.FoodSource
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.ui.components.DecimalField
 import com.lorenzo.caltracker.ui.components.TimeField
@@ -80,7 +81,15 @@ fun LogFoodScreen(viewModel: LogFoodViewModel, onBack: () -> Unit, onSaved: () -
             Modifier.fillMaxSize().padding(padding).imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            food.brand?.let { Text(it, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            val origin = listOfNotNull(
+                food.brand,
+                when (food.source) {
+                    FoodSource.OPEN_FOOD_FACTS -> "data: Open Food Facts"
+                    FoodSource.USDA -> "data: USDA FoodData Central"
+                    FoodSource.CUSTOM -> null
+                },
+            )
+            if (origin.isNotEmpty()) Text(origin.joinToString(" · "), color = MaterialTheme.colorScheme.onSurfaceVariant)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 viewModel.unitOptions.forEach { option ->
                     FilterChip(
