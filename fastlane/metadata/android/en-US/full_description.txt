@@ -1,0 +1,14 @@
+<p>CalTracker is a calorie and macro tracker that keeps your data on your phone.</p>
+<p><b>Log food quickly</b></p>
+<ul>
+<li>Search your saved foods, Open Food Facts (packaged products) and USDA FoodData Central (generic foods)</li>
+<li>Scan barcodes</li>
+<li>Quick add calories and macros without creating a food</li>
+<li>Recipes: group foods, log portions or grams, split a logged recipe back into its ingredients, or turn selected entries into a recipe</li>
+<li>Remembers the amount you used last time</li>
+</ul>
+<p><b>A diary as a timeline</b>: every entry has a time, no breakfast/lunch/dinner boxes. Swipe between days; copy, move, duplicate or delete entries, or copy a whole day.</p>
+<p><b>Goals</b>: set your calories and let the app calculate protein, carbs and fat from your body weight (Mifflin-St Jeor), or set every value yourself.</p>
+<p><b>History</b>: stacked column chart of daily calories by macro, and a weight chart with a 7-day average. Logging your weight keeps your macro targets up to date.</p>
+<p><b>Your data</b>: JSON backup and restore to move to a new phone, export to Excel (.xlsx) for your own analysis. No account, no ads, no tracking.</p>
+<p>Includes a home-screen widget with today's calories and macros.</p>
