@@ -1,0 +1,5 @@
+- The diary's goals card stays in place while you scroll your entries
+- Choose how many recent foods Add food shows (Settings → General, default 10)
+- Diary grouping now defaults to 10 minutes
+- Grouped items show their calories smaller, so the group total stands out
+- Diary grouping and the USDA key are now together under Settings → General
