@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -17,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
@@ -87,11 +89,7 @@ fun SettingsScreen(
             GoalsCard(state.goals, state.profile, onClick = onEditGoals)
             val groupMinutes by viewModel.groupMinutes.collectAsStateWithLifecycle()
             var pickingGroup by remember { mutableStateOf(false) }
-            SummaryCard(
-                "Diary",
-                listOf("Group entries within" to groupLabel(groupMinutes)),
-                onClick = { pickingGroup = true },
-            )
+
             if (pickingGroup) {
                 GroupMinutesDialog(
                     current = groupMinutes,
@@ -103,10 +101,11 @@ fun SettingsScreen(
                 )
             }
             val usdaKey by viewModel.usdaApiKey.collectAsStateWithLifecycle()
-            SummaryCard(
-                "Food search",
-                listOf("USDA API key" to (usdaKey?.let { "Your key ••••${it.takeLast(4)}" } ?: "Shared (limited)")),
-                onClick = viewModel::openUsdaKey,
+            GeneralCard(
+                listOf(
+                    SettingRow("Group diary entries within", groupLabel(groupMinutes)) { pickingGroup = true },
+                    SettingRow("USDA API key", usdaKey?.let { "Your key ••••${it.takeLast(4)}" } ?: "Shared (limited)", viewModel::openUsdaKey),
+                ),
             )
             BackupSection(viewModel)
             DeleteDataSection(onDelete = { viewModel.deleteAllData(onDataDeleted) })
@@ -122,6 +121,40 @@ fun SettingsScreen(
             onSave = viewModel::saveUsdaKey,
             onUseShared = viewModel::useSharedUsdaKey,
         )
+    }
+}
+
+private data class SettingRow(val label: String, val value: String, val onClick: () -> Unit)
+
+/** App settings; each row opens its own editor. */
+@Composable
+private fun GeneralCard(rows: List<SettingRow>) {
+    Card(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(vertical = 8.dp)) {
+            Text(
+                "General",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+            )
+            rows.forEach { row ->
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = row.onClick)
+                        .padding(start = 16.dp, end = 8.dp, top = 10.dp, bottom = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(row.label, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+                    Text(row.value)
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = "Change ${row.label}",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
     }
 }
 
