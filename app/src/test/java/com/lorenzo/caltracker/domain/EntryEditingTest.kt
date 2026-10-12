@@ -33,4 +33,21 @@ class EntryEditingTest {
         val groups = listOf("08:00", "08:00", "08:01").map { entry(it) }.groupByTime(0)
         assertEquals(listOf(2, 1), groups.map { it.size })
     }
+
+    @Test
+    fun switchingToServingsKeepsNutrients() {
+        val choices = UnitChoices(EntryUnit.G, 40.0, "slice")
+        val e = entry("08:00").inUnit(EntryUnit.SERVING, choices)
+        assertEquals(EntryUnit.SERVING, e.unit)
+        assertEquals(2.5, e.amount, 1e-9)
+        assertEquals(100.0, e.kcal, 1e-9)
+        assertEquals(entry("08:00").amount, e.inUnit(EntryUnit.G, choices).amount, 1e-9)
+    }
+
+    @Test
+    fun cannotSwitchWithoutAServingSize() {
+        val e = entry("08:00").inUnit(EntryUnit.SERVING, UnitChoices(EntryUnit.G, null, "serving"))
+        assertEquals(EntryUnit.G, e.unit)
+        assertEquals(listOf(EntryUnit.G), UnitChoices(EntryUnit.G, null, "serving").units)
+    }
 }

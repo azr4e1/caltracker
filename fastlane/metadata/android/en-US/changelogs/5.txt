@@ -1,0 +1,2 @@
+- When editing a logged food or recipe, you can switch between grams (or ml) and servings, like when adding it
+- Tapping a number field selects its value, so typing replaces it

@@ -33,6 +33,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -42,6 +43,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lorenzo.caltracker.data.repository.PendingItem
+import com.lorenzo.caltracker.domain.UnitChoices
 import com.lorenzo.caltracker.ui.components.MacroDonut
 import com.lorenzo.caltracker.ui.components.StackedProgress
 import com.lorenzo.caltracker.ui.diary.EditEntryDialog
@@ -137,11 +139,13 @@ fun ReviewScreen(viewModel: ReviewViewModel, onBack: () -> Unit, onConfirmed: ()
     }
 
     editing?.let { item ->
+        val unitChoices by produceState<UnitChoices?>(null, item.entry) { value = viewModel.unitChoices(item.entry) }
         EditEntryDialog(
             entry = item.entry,
+            unitChoices = unitChoices,
             onDismiss = { editing = null },
-            onSaveAmount = { amount, time ->
-                viewModel.updateAmount(item, amount, time)
+            onSaveEntry = {
+                viewModel.updateEntry(item, it)
                 editing = null
             },
             onSaveQuickAdd = { name, n, time ->

@@ -59,6 +59,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -76,6 +77,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.domain.Nutrients
+import com.lorenzo.caltracker.domain.UnitChoices
 import com.lorenzo.caltracker.domain.groupByTime
 import com.lorenzo.caltracker.domain.totalNutrients
 import com.lorenzo.caltracker.ui.components.AppIcons
@@ -302,11 +304,13 @@ fun DiaryScreen(
     }
 
     editing?.let { entry ->
+        val unitChoices by produceState<UnitChoices?>(null, entry) { value = viewModel.unitChoices(entry) }
         EditEntryDialog(
             entry = entry,
+            unitChoices = unitChoices,
             onDismiss = { editing = null },
-            onSaveAmount = { amount, time ->
-                viewModel.updateAmount(entry, amount, time)
+            onSaveEntry = {
+                viewModel.updateEntry(it)
                 editing = null
             },
             onSaveQuickAdd = { name, nutrients, time ->

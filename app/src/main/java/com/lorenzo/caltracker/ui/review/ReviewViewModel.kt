@@ -8,9 +8,10 @@ import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.data.repository.PendingItem
 import com.lorenzo.caltracker.data.repository.PendingLog
 import com.lorenzo.caltracker.data.repository.SettingsRepository
+import com.lorenzo.caltracker.data.repository.UnitChoicesRepository
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.domain.totalNutrients
-import com.lorenzo.caltracker.domain.withAmount
+import com.lorenzo.caltracker.domain.UnitChoices
 import com.lorenzo.caltracker.domain.withValues
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import com.lorenzo.caltracker.ui.navigation.ReviewRoute
@@ -36,6 +37,7 @@ class ReviewViewModel(
     route: ReviewRoute,
     private val pendingLog: PendingLog,
     private val logRepository: LogRepository,
+    private val unitChoicesRepository: UnitChoicesRepository,
     settingsRepository: SettingsRepository,
 ) : ViewModel() {
     val date: LocalDate = LocalDate.ofEpochDay(route.epochDay)
@@ -47,8 +49,9 @@ class ReviewViewModel(
         ::ReviewUiState,
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReviewUiState())
 
-    fun updateAmount(item: PendingItem, amount: Double, time: LocalTime) =
-        pendingLog.update(item.key, item.entry.withAmount(amount).copy(time = time))
+    suspend fun unitChoices(entry: LogEntry): UnitChoices? = unitChoicesRepository.forEntry(entry)
+
+    fun updateEntry(item: PendingItem, entry: LogEntry) = pendingLog.update(item.key, entry)
 
     fun updateQuickAdd(item: PendingItem, name: String, n: Nutrients, time: LocalTime) =
         pendingLog.update(item.key, item.entry.withValues(name, n).copy(time = time))
@@ -70,7 +73,7 @@ class ReviewViewModel(
 
     companion object {
         fun factory(route: ReviewRoute) = appViewModelFactory {
-            ReviewViewModel(route, it.pendingLog, it.logRepository, it.settingsRepository)
+            ReviewViewModel(route, it.pendingLog, it.logRepository, it.unitChoicesRepository, it.settingsRepository)
         }
     }
 }

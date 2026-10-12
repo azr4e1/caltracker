@@ -19,6 +19,7 @@ import com.lorenzo.caltracker.data.repository.PendingLog
 import com.lorenzo.caltracker.data.repository.PreferencesRepository
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
+import com.lorenzo.caltracker.data.repository.UnitChoicesRepository
 import com.lorenzo.caltracker.data.repository.WeightRepository
 
 /** Holds the app-wide singletons. Screens get their dependencies from here. */
@@ -27,6 +28,7 @@ class AppContainer(app: Application) {
     val logRepository: LogRepository by lazy { LogRepository(database) }
     val foodRepository: FoodRepository by lazy { FoodRepository(database.foodDao()) }
     val recipeRepository: RecipeRepository by lazy { RecipeRepository(database) }
+    val unitChoicesRepository: UnitChoicesRepository by lazy { UnitChoicesRepository(foodRepository, recipeRepository) }
     val settingsRepository: SettingsRepository by lazy { SettingsRepository(database.settingsDao()) }
     val backupRepository: BackupRepository by lazy { BackupRepository(app, database) }
     val exportRepository: ExportRepository by lazy {

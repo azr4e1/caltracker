@@ -1,5 +1,6 @@
 package com.lorenzo.caltracker.domain
 
+import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import java.time.Duration
 import java.time.LocalTime
@@ -28,4 +29,26 @@ fun List<LogEntry>.groupByTime(windowMinutes: Int): List<List<LogEntry>> {
         if (group != null && minutes != null && minutes in 0..windowMinutes.toLong()) group += entry else groups += mutableListOf(entry)
     }
     return groups
+}
+
+/**
+ * What a logged food or recipe offers for switching units: [baseUnit] (g or ml) and, if it has one,
+ * the [size] of a serving in that unit. [servingLabel] names the serving, e.g. "slice" or "portion".
+ */
+data class UnitChoices(val baseUnit: EntryUnit, val size: Double?, val servingLabel: String) {
+    val units: List<EntryUnit> get() = if (size != null && size > 0) listOf(baseUnit, EntryUnit.SERVING) else listOf(baseUnit)
+}
+
+/**
+ * The same entry expressed in [target] (base unit or servings): the amount is converted, nutrients
+ * stay the same. Unchanged if the conversion isn't possible.
+ */
+fun LogEntry.inUnit(target: EntryUnit, choices: UnitChoices): LogEntry {
+    val size = choices.size?.takeIf { it > 0 }
+    return when {
+        target == unit || isQuickAdd -> this
+        target == EntryUnit.SERVING && unit == choices.baseUnit && size != null -> copy(amount = amount / size, unit = target)
+        target == choices.baseUnit && unit == EntryUnit.SERVING && size != null -> copy(amount = amount * size, unit = target)
+        else -> this
+    }
 }

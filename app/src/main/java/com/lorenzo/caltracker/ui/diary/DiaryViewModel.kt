@@ -13,10 +13,11 @@ import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.data.repository.PreferencesRepository
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
+import com.lorenzo.caltracker.data.repository.UnitChoicesRepository
 import com.lorenzo.caltracker.data.repository.WeightRepository
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.domain.splitRecipeEntry
-import com.lorenzo.caltracker.domain.withAmount
+import com.lorenzo.caltracker.domain.UnitChoices
 import com.lorenzo.caltracker.domain.withValues
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import java.time.LocalDate
@@ -32,6 +33,7 @@ class DiaryViewModel(
     private val logRepository: LogRepository,
     private val recipeRepository: RecipeRepository,
     private val weightRepository: WeightRepository,
+    private val unitChoicesRepository: UnitChoicesRepository,
     private val dateHolder: DiaryDateHolder,
     settingsRepository: SettingsRepository,
     preferences: PreferencesRepository,
@@ -103,8 +105,10 @@ class DiaryViewModel(
         viewModelScope.launch { logRepository.replace(parts, listOf(original)) }
     }
 
-    /** Changes the quantity of a food entry, scaling its nutrient snapshot. */
-    fun updateAmount(entry: LogEntry, amount: Double, time: LocalTime) = update(entry.withAmount(amount).copy(time = time))
+    suspend fun unitChoices(entry: LogEntry): UnitChoices? = unitChoicesRepository.forEntry(entry)
+
+    /** Saves an edited food or recipe entry (amount, unit, time). */
+    fun updateEntry(entry: LogEntry) = update(entry)
 
     /** Replaces the values of a quick-add entry. */
     fun updateQuickAdd(entry: LogEntry, name: String, nutrients: Nutrients, time: LocalTime) =
@@ -136,7 +140,7 @@ class DiaryViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            DiaryViewModel(it.logRepository, it.recipeRepository, it.weightRepository, it.diaryDate, it.settingsRepository, it.preferencesRepository)
+            DiaryViewModel(it.logRepository, it.recipeRepository, it.weightRepository, it.unitChoicesRepository, it.diaryDate, it.settingsRepository, it.preferencesRepository)
         }
     }
 }
