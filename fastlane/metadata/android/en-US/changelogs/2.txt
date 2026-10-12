@@ -1,0 +1,6 @@
+- Pick several foods at once: Add collects them, Next shows a review with your goals or the macro split, then Confirm logs everything
+- Diary groups entries logged close together, with the group's total (time window in Settings)
+- Add your own USDA API key in Settings for more generic-food searches
+- Clearer sections in the food list
+- Fix: the Recent foods section could be hidden off screen
+- The app now stays in portrait
