@@ -11,6 +11,8 @@ import com.lorenzo.caltracker.data.remote.RemoteFood
 import com.lorenzo.caltracker.data.repository.BarcodeResult
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.OnlineFoodRepository
+import com.lorenzo.caltracker.data.repository.PendingItem
+import com.lorenzo.caltracker.data.repository.PendingLog
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -31,6 +33,8 @@ data class AddFoodUiState(
     val results: List<Food> = emptyList(),
     /** All recipes, or the matching ones while searching. */
     val recipes: List<RecipeWithIngredients> = emptyList(),
+    /** False until the lists have been read once. */
+    val loaded: Boolean = false,
 )
 
 /** An online search for [query]. Each source's result is null while it is still loading. */
@@ -52,7 +56,13 @@ class AddFoodViewModel(
     foodRepository: FoodRepository,
     recipeRepository: RecipeRepository,
     private val onlineFoods: OnlineFoodRepository,
+    private val pendingLog: PendingLog,
 ) : ViewModel() {
+    /** Foods picked but not logged yet. */
+    val pending: StateFlow<List<PendingItem>> = pendingLog.items
+
+    fun discardPending() = pendingLog.clear()
+
     private val query = MutableStateFlow("")
 
     private val results = query.flatMapLatest { q ->
@@ -70,7 +80,7 @@ class AddFoodViewModel(
         results,
         recipes,
     ) { q, recent, all, found, recipeList ->
-        AddFoodUiState(query = q, recent = recent, all = all, results = found, recipes = recipeList)
+        AddFoodUiState(query = q, recent = recent, all = all, results = found, recipes = recipeList, loaded = true)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AddFoodUiState())
 
     var online by mutableStateOf<OnlineSearch?>(null)
@@ -147,6 +157,6 @@ class AddFoodViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { AddFoodViewModel(it.foodRepository, it.recipeRepository, it.onlineFoodRepository) }
+        val Factory = appViewModelFactory { AddFoodViewModel(it.foodRepository, it.recipeRepository, it.onlineFoodRepository, it.pendingLog) }
     }
 }

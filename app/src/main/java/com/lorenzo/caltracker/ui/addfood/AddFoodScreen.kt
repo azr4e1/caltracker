@@ -1,6 +1,7 @@
 package com.lorenzo.caltracker.ui.addfood
 
 import android.content.Context
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,6 +19,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
@@ -58,6 +61,7 @@ import com.lorenzo.caltracker.data.remote.RemoteFood
 import com.lorenzo.caltracker.domain.nutrition
 import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.formatWhole
+import com.lorenzo.caltracker.ui.plural
 
 /**
  * Finds a food to log: saved foods, recipes, online search, barcode scan.
@@ -74,9 +78,15 @@ fun AddFoodScreen(
     onNewFood: () -> Unit,
     onRecipeSelected: (Long) -> Unit,
     onNewRecipe: () -> Unit,
+    onNext: () -> Unit,
     viewModel: AddFoodViewModel = viewModel(factory = AddFoodViewModel.Factory),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val pending by viewModel.pending.collectAsStateWithLifecycle()
+    var confirmDiscard by remember { mutableStateOf(false) }
+    // Leaving with foods picked but not logged asks first.
+    val leave = { if (!pickingIngredient && pending.isNotEmpty()) confirmDiscard = true else onBack() }
+    BackHandler(enabled = !pickingIngredient && pending.isNotEmpty()) { confirmDiscard = true }
     var expandedSections by remember(viewModel.online?.query) { mutableStateOf(emptySet<String>()) }
     val context = LocalContext.current
     val keyboard = LocalSoftwareKeyboardController.current
@@ -103,7 +113,12 @@ fun AddFoodScreen(
             TopAppBar(
                 title = { Text(if (pickingIngredient) "Add ingredient" else "Add food") },
                 navigationIcon = {
-                    IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                    IconButton(onClick = leave) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back") }
+                },
+                actions = {
+                    if (!pickingIngredient && pending.isNotEmpty()) {
+                        Button(onClick = onNext, modifier = Modifier.padding(end = 8.dp)) { Text("Next (${pending.size})") }
+                    }
                 },
             )
         },
@@ -135,7 +150,9 @@ fun AddFoodScreen(
                 }
                 FilledTonalButton(onClick = onNewFood, modifier = Modifier.weight(1f)) { Text("New food") }
             }
-            LazyColumn(Modifier.fillMaxSize()) {
+            // Drawn only once loaded: sections arriving later would be inserted above the
+            // visible items and end up scrolled out of view.
+            if (state.loaded) LazyColumn(Modifier.fillMaxSize()) {
                 if (state.query.isNotBlank()) {
                     if (!pickingIngredient && state.recipes.isNotEmpty()) recipeSection(state.recipes, onRecipeSelected, onNewRecipe)
                     savedFoodSection("Your foods", state.results, onFoodSelected, empty = "No saved food matches.")
@@ -153,6 +170,22 @@ fun AddFoodScreen(
                 }
             }
         }
+    }
+
+    if (confirmDiscard) {
+        AlertDialog(
+            onDismissRequest = { confirmDiscard = false },
+            title = { Text("Discard selection?") },
+            text = { Text("${plural(pending.size, "food", "foods")} you picked haven't been logged yet.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmDiscard = false
+                    viewModel.discardPending()
+                    onBack()
+                }) { Text("Discard") }
+            },
+            dismissButton = { TextButton(onClick = { confirmDiscard = false }) { Text("Keep") } },
+        )
     }
 }
 

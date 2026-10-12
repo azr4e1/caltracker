@@ -15,6 +15,7 @@ import com.lorenzo.caltracker.data.repository.DiaryDateHolder
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.data.repository.OnlineFoodRepository
+import com.lorenzo.caltracker.data.repository.PendingLog
 import com.lorenzo.caltracker.data.repository.PreferencesRepository
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
@@ -35,6 +36,7 @@ class AppContainer(app: Application) {
     val onlineFoodRepository: OnlineFoodRepository by lazy { OnlineFoodRepository(foodRepository, preferencesRepository) }
     val preferencesRepository: PreferencesRepository by lazy { PreferencesRepository(app) }
     val diaryDate = DiaryDateHolder()
+    val pendingLog = PendingLog()
 }
 
 @OptIn(FlowPreview::class)

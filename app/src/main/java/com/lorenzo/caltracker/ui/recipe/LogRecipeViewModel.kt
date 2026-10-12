@@ -8,7 +8,7 @@ import androidx.lifecycle.viewModelScope
 import com.lorenzo.caltracker.data.db.dao.RecipeWithIngredients
 import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.LogEntry
-import com.lorenzo.caltracker.data.repository.LogRepository
+import com.lorenzo.caltracker.data.repository.PendingLog
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.domain.nutrition
@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 class LogRecipeViewModel(
     route: LogRecipeRoute,
     private val recipeRepository: RecipeRepository,
-    private val logRepository: LogRepository,
+    private val pendingLog: PendingLog,
 ) : ViewModel() {
     private val date = LocalDate.ofEpochDay(route.epochDay)
 
@@ -58,7 +58,7 @@ class LogRecipeViewModel(
         val r = recipe ?: return
         val n = preview ?: return
         viewModelScope.launch {
-            logRepository.add(
+            pendingLog.add(
                 LogEntry(
                     date = date,
                     time = time,
@@ -85,6 +85,6 @@ class LogRecipeViewModel(
     }
 
     companion object {
-        fun factory(route: LogRecipeRoute) = appViewModelFactory { LogRecipeViewModel(route, it.recipeRepository, it.logRepository) }
+        fun factory(route: LogRecipeRoute) = appViewModelFactory { LogRecipeViewModel(route, it.recipeRepository, it.pendingLog) }
     }
 }

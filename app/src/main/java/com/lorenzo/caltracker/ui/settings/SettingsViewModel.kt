@@ -33,6 +33,10 @@ class SettingsViewModel(
     /** The user's own USDA key, or null when the shared one is used. */
     val usdaApiKey: StateFlow<String?> = preferences.usdaApiKey
 
+    val groupMinutes: StateFlow<Int> = preferences.groupMinutes
+
+    fun setGroupMinutes(minutes: Int) = preferences.setGroupMinutes(minutes)
+
     var editingUsdaKey by mutableStateOf(false)
     var checkingUsdaKey by mutableStateOf(false)
         private set

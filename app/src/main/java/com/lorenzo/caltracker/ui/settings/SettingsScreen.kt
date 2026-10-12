@@ -14,10 +14,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -38,12 +40,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lorenzo.caltracker.data.db.entity.GoalMode
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.Profile
+import com.lorenzo.caltracker.data.repository.PreferencesRepository
 import com.lorenzo.caltracker.domain.GoalCalculator
 import com.lorenzo.caltracker.ui.formatAmount
 import com.lorenzo.caltracker.ui.formatWhole
@@ -81,6 +85,23 @@ fun SettingsScreen(
         ) {
             ProfileCard(state.profile, onClick = onEditProfile)
             GoalsCard(state.goals, state.profile, onClick = onEditGoals)
+            val groupMinutes by viewModel.groupMinutes.collectAsStateWithLifecycle()
+            var pickingGroup by remember { mutableStateOf(false) }
+            SummaryCard(
+                "Diary",
+                listOf("Group entries within" to groupLabel(groupMinutes)),
+                onClick = { pickingGroup = true },
+            )
+            if (pickingGroup) {
+                GroupMinutesDialog(
+                    current = groupMinutes,
+                    onDismiss = { pickingGroup = false },
+                    onSelect = {
+                        viewModel.setGroupMinutes(it)
+                        pickingGroup = false
+                    },
+                )
+            }
             val usdaKey by viewModel.usdaApiKey.collectAsStateWithLifecycle()
             SummaryCard(
                 "Food search",
@@ -257,4 +278,36 @@ private fun DeleteDataSection(onDelete: () -> Unit) {
             dismissButton = { TextButton(onClick = { confirming = false }) { Text("Cancel") } },
         )
     }
+}
+
+private fun groupLabel(minutes: Int) = if (minutes == 0) "Off (same minute only)" else "$minutes min"
+
+@Composable
+private fun GroupMinutesDialog(current: Int, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Group diary entries") },
+        text = {
+            Column {
+                Text(
+                    "Entries logged within this time of a group's first entry are shown together with their total.",
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.padding(bottom = 8.dp),
+                )
+                PreferencesRepository.GROUP_MINUTE_OPTIONS.forEach { minutes ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .selectable(selected = minutes == current, onClick = { onSelect(minutes) }, role = Role.RadioButton)
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = minutes == current, onClick = null)
+                        Text(groupLabel(minutes), modifier = Modifier.padding(start = 12.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
+    )
 }

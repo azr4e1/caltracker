@@ -18,13 +18,26 @@ class PreferencesRepository(context: Context) {
     /** The user's own USDA API key, or null to use the shared one built into the app. */
     val usdaApiKey: StateFlow<String?> = _usdaApiKey.asStateFlow()
 
+    private val _groupMinutes = MutableStateFlow(prefs.getInt(KEY_GROUP_MINUTES, DEFAULT_GROUP_MINUTES))
+
+    /** Diary entries logged within this many minutes of a group's first entry are shown together. 0 = off. */
+    val groupMinutes: StateFlow<Int> = _groupMinutes.asStateFlow()
+
+    fun setGroupMinutes(minutes: Int) {
+        prefs.edit { putInt(KEY_GROUP_MINUTES, minutes) }
+        _groupMinutes.value = minutes
+    }
+
     fun setUsdaApiKey(key: String?) {
         val value = key?.trim()?.ifEmpty { null }
         prefs.edit { if (value == null) remove(KEY_USDA) else putString(KEY_USDA, value) }
         _usdaApiKey.value = value
     }
 
-    private companion object {
-        const val KEY_USDA = "usdaApiKey"
+    companion object {
+        private const val KEY_USDA = "usdaApiKey"
+        private const val KEY_GROUP_MINUTES = "groupMinutes"
+        const val DEFAULT_GROUP_MINUTES = 15
+        val GROUP_MINUTE_OPTIONS = listOf(0, 5, 10, 15, 30, 60)
     }
 }

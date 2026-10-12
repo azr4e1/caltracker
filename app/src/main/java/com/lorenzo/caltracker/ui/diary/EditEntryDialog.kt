@@ -30,7 +30,7 @@ import com.lorenzo.caltracker.ui.toDecimalOrNull
 import java.time.LocalTime
 
 /**
- * Edits a logged entry. Food entries edit the amount (nutrients scale with it);
+ * Edits a logged (or about-to-be-logged) entry. Actions passed as null are hidden. Food entries edit the amount (nutrients scale with it);
  * quick adds edit their values directly.
  */
 @Composable
@@ -39,11 +39,12 @@ fun EditEntryDialog(
     onDismiss: () -> Unit,
     onSaveAmount: (Double, LocalTime) -> Unit,
     onSaveQuickAdd: (String, Nutrients, LocalTime) -> Unit,
-    onDuplicate: () -> Unit,
-    onCopyTo: () -> Unit,
-    onMoveTo: () -> Unit,
-    onSplit: () -> Unit,
+    onDuplicate: (() -> Unit)?,
+    onCopyTo: (() -> Unit)?,
+    onMoveTo: (() -> Unit)?,
+    onSplit: (() -> Unit)?,
     onDelete: () -> Unit,
+    deleteLabel: String = "Delete entry",
 ) {
     var time by remember { mutableStateOf(entry.time) }
     var name by remember { mutableStateOf(entry.name) }
@@ -93,14 +94,14 @@ fun EditEntryDialog(
                 }
                 TimeField(time, { time = it }, Modifier.fillMaxWidth())
                 Column {
-                    TextButton(onClick = onDuplicate) { Text("Duplicate") }
-                    TextButton(onClick = onCopyTo) { Text("Copy to another day…") }
-                    TextButton(onClick = onMoveTo) { Text("Move to another day…") }
-                    if (entry.recipeId != null) TextButton(onClick = onSplit) { Text("Split into ingredients") }
+                    onDuplicate?.let { TextButton(onClick = it) { Text("Duplicate") } }
+                    onCopyTo?.let { TextButton(onClick = it) { Text("Copy to another day…") } }
+                    onMoveTo?.let { TextButton(onClick = it) { Text("Move to another day…") } }
+                    if (entry.recipeId != null) onSplit?.let { TextButton(onClick = it) { Text("Split into ingredients") } }
                     TextButton(
                         onClick = onDelete,
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error),
-                    ) { Text("Delete entry") }
+                    ) { Text(deleteLabel) }
                 }
             }
         },

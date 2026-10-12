@@ -22,6 +22,12 @@ class LogRepository(private val database: AppDatabase) {
 
     suspend fun add(entry: LogEntry): Long = dao.insert(entry)
 
+    /** Logs several new entries at once. */
+    suspend fun addAll(entries: List<LogEntry>) {
+        val now = System.currentTimeMillis()
+        dao.insertAll(entries.map { it.copy(id = 0, createdAt = now) })
+    }
+
     suspend fun update(entry: LogEntry) = dao.update(entry)
 
     /** Re-inserts entries with their original ids, e.g. to undo a delete. */

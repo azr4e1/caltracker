@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -75,6 +76,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.domain.Nutrients
+import com.lorenzo.caltracker.domain.groupByTime
 import com.lorenzo.caltracker.domain.totalNutrients
 import com.lorenzo.caltracker.ui.components.AppIcons
 import com.lorenzo.caltracker.ui.components.DateSelectDialog
@@ -86,6 +88,7 @@ import com.lorenzo.caltracker.ui.unitLabel
 import com.lorenzo.caltracker.ui.theme.macroColors
 import com.lorenzo.caltracker.ui.weight.WeightDialog
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs
@@ -120,6 +123,7 @@ fun DiaryScreen(
     var loggingWeight by remember { mutableStateOf(false) }
     val weights by viewModel.weights.collectAsStateWithLifecycle()
     val profileWeight by viewModel.profileWeightKg.collectAsStateWithLifecycle()
+    val groupMinutes by viewModel.groupMinutes.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
@@ -230,9 +234,12 @@ fun DiaryScreen(
             DayPage(
                 entries = entries,
                 goals = goals,
+                groupMinutes = groupMinutes,
                 selectedIds = viewModel.selectedIds,
                 onClick = { entry -> if (selecting) viewModel.toggleSelection(entry) else editing = entry },
                 onLongClick = viewModel::toggleSelection,
+                onGroupLongClick = viewModel::toggleGroup,
+                onGroupClick = { group -> if (selecting) viewModel.toggleGroup(group) },
             )
         }
     }
@@ -402,15 +409,44 @@ fun dateLabel(date: LocalDate): String {
     }
 }
 
+/** One line of the diary timeline: a group header, or an entry. */
+private sealed interface TimelineItem {
+    val key: String
+
+    data class Header(val entries: List<LogEntry>) : TimelineItem {
+        override val key get() = "group-${entries.first().id}"
+    }
+
+    data class Entry(val entry: LogEntry, val time: LocalTime?, val dot: Boolean, val inGroup: Boolean) : TimelineItem {
+        override val key get() = "entry-${entry.id}"
+    }
+}
+
+private fun timelineItems(entries: List<LogEntry>, groupMinutes: Int): List<TimelineItem> =
+    entries.groupByTime(groupMinutes).flatMap { group ->
+        if (group.size == 1) {
+            listOf(TimelineItem.Entry(group[0], group[0].time, dot = true, inGroup = false))
+        } else {
+            val start = group.first().time
+            // Inside a group, an item shows its own time only when it differs from the group's.
+            listOf(TimelineItem.Header(group)) +
+                group.map { TimelineItem.Entry(it, it.time.takeIf { t -> t != start }, dot = false, inGroup = true) }
+        }
+    }
+
 @Composable
 private fun DayPage(
     entries: List<LogEntry>?,
     goals: Goals?,
+    groupMinutes: Int,
     selectedIds: Set<Long>,
     onClick: (LogEntry) -> Unit,
     onLongClick: (LogEntry) -> Unit,
+    onGroupClick: (List<LogEntry>) -> Unit,
+    onGroupLongClick: (List<LogEntry>) -> Unit,
 ) {
     if (entries == null) return
+    val items = remember(entries, groupMinutes) { timelineItems(entries, groupMinutes) }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 88.dp)) {
         item { GoalsCard(entries.totalNutrients(), goals) }
         if (entries.isEmpty()) {
@@ -423,18 +459,34 @@ private fun DayPage(
                 )
             }
         }
-        itemsIndexed(entries, key = { _, entry -> entry.id }) { index, entry ->
-            // Show the time only on the first of several entries logged at the same minute.
-            val showTime = index == 0 || entries[index - 1].time != entry.time
-            TimelineRow(
-                entry = entry,
-                showTime = showTime,
-                isFirst = index == 0,
-                isLast = index == entries.lastIndex,
-                selected = entry.id in selectedIds,
-                onClick = { onClick(entry) },
-                onLongClick = { onLongClick(entry) },
-            )
+        itemsIndexed(items, key = { _, item -> item.key }) { index, item ->
+            val isFirst = index == 0
+            val isLast = index == items.lastIndex
+            when (item) {
+                is TimelineItem.Header -> {
+                    val group = item.entries
+                    TimelineRow(
+                        time = group.first().time,
+                        timeMuted = false,
+                        dot = true,
+                        isFirst = isFirst,
+                        isLast = isLast,
+                        selected = group.all { it.id in selectedIds },
+                        onClick = { onGroupClick(group) },
+                        onLongClick = { onGroupLongClick(group) },
+                    ) { GroupHeaderContent(group) }
+                }
+                is TimelineItem.Entry -> TimelineRow(
+                    time = item.time,
+                    timeMuted = item.inGroup,
+                    dot = item.dot,
+                    isFirst = isFirst,
+                    isLast = isLast,
+                    selected = item.entry.id in selectedIds,
+                    onClick = { onClick(item.entry) },
+                    onLongClick = { onLongClick(item.entry) },
+                ) { EntryContent(item.entry, indented = item.inGroup) }
+            }
         }
     }
 }
@@ -495,17 +547,19 @@ private fun Progress(value: Double, goal: Double, color: Color) {
     )
 }
 
-/** One entry: time on the left, a vertical timeline in the middle, the food on the right. */
+/** A timeline line: time on the left, the rail (with an optional dot) in the middle, [content] on the right. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun TimelineRow(
-    entry: LogEntry,
-    showTime: Boolean,
+    time: LocalTime?,
+    timeMuted: Boolean,
+    dot: Boolean,
     isFirst: Boolean,
     isLast: Boolean,
     selected: Boolean,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    content: @Composable RowScope.() -> Unit,
 ) {
     val lineColor = MaterialTheme.colorScheme.outlineVariant
     val dotColor = MaterialTheme.colorScheme.primary
@@ -518,10 +572,10 @@ private fun TimelineRow(
             .padding(horizontal = 16.dp),
     ) {
         Text(
-            text = if (showTime) entry.time.formatHm() else "",
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.width(48.dp).padding(top = 10.dp),
+            text = time?.formatHm().orEmpty(),
+            style = if (timeMuted) MaterialTheme.typography.labelSmall else MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = if (timeMuted) 0.7f else 1f),
+            modifier = Modifier.width(48.dp).padding(top = if (timeMuted) 12.dp else 10.dp),
         )
         Box(
             Modifier
@@ -535,18 +589,38 @@ private fun TimelineRow(
                         val bottom = if (isLast) dotY else size.height
                         drawLine(lineColor, Offset(x, top), Offset(x, bottom), strokeWidth = 2.dp.toPx())
                     }
-                    if (showTime) drawCircle(dotColor, radius = 5.dp.toPx(), center = Offset(x, dotY))
+                    if (dot) drawCircle(dotColor, radius = 5.dp.toPx(), center = Offset(x, dotY))
                 },
         )
         Spacer(Modifier.width(8.dp))
-        Row(Modifier.weight(1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(entry.name, style = MaterialTheme.typography.bodyLarge)
-                Text(entryDetails(entry), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Text("${entry.kcal.formatWhole()} kcal", style = MaterialTheme.typography.bodyMedium)
-        }
+        Row(Modifier.weight(1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, content = content)
     }
+}
+
+@Composable
+private fun RowScope.EntryContent(entry: LogEntry, indented: Boolean) {
+    Column(Modifier.weight(1f).padding(start = if (indented) 12.dp else 0.dp)) {
+        Text(entry.name, style = MaterialTheme.typography.bodyLarge)
+        Text(entryDetails(entry), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+    Text("${entry.kcal.formatWhole()} kcal", style = MaterialTheme.typography.bodyMedium)
+}
+
+/** Summary line above a group of entries logged close together. */
+@Composable
+private fun RowScope.GroupHeaderContent(group: List<LogEntry>) {
+    val total = group.totalNutrients()
+    val range = "${group.first().time.formatHm()}–${group.last().time.formatHm()}"
+    Column(Modifier.weight(1f)) {
+        Text(plural(group.size, "item", "items"), style = MaterialTheme.typography.titleSmall)
+        Text(
+            listOfNotNull(range.takeIf { group.first().time != group.last().time }, "P ${total.protein.formatWhole()} · C ${total.carbs.formatWhole()} · F ${total.fat.formatWhole()}")
+                .joinToString(" · "),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+    Text("${total.kcal.formatWhole()} kcal", style = MaterialTheme.typography.titleSmall)
 }
 
 private fun entryDetails(entry: LogEntry): String {

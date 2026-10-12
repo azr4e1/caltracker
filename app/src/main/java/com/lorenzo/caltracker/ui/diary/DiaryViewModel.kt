@@ -10,11 +10,14 @@ import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.WeightEntry
 import com.lorenzo.caltracker.data.repository.DiaryDateHolder
 import com.lorenzo.caltracker.data.repository.LogRepository
+import com.lorenzo.caltracker.data.repository.PreferencesRepository
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
 import com.lorenzo.caltracker.data.repository.WeightRepository
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.domain.splitRecipeEntry
+import com.lorenzo.caltracker.domain.withAmount
+import com.lorenzo.caltracker.domain.withValues
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import java.time.LocalDate
 import java.time.LocalTime
@@ -31,7 +34,10 @@ class DiaryViewModel(
     private val weightRepository: WeightRepository,
     private val dateHolder: DiaryDateHolder,
     settingsRepository: SettingsRepository,
+    preferences: PreferencesRepository,
 ) : ViewModel() {
+    val groupMinutes: StateFlow<Int> = preferences.groupMinutes
+
     val selectedDate: StateFlow<LocalDate> = dateHolder.date
 
     val goals: StateFlow<Goals?> = settingsRepository.goals
@@ -70,6 +76,12 @@ class DiaryViewModel(
         selectedIds = emptySet()
     }
 
+    /** Selects a whole group, or deselects it if it's already fully selected. */
+    fun toggleGroup(group: List<LogEntry>) {
+        val ids = group.map { it.id }.toSet()
+        selectedIds = if (selectedIds.containsAll(ids)) selectedIds - ids else selectedIds + ids
+    }
+
     fun selectAll(entries: List<LogEntry>) {
         selectedIds = entries.map { it.id }.toSet()
     }
@@ -92,34 +104,11 @@ class DiaryViewModel(
     }
 
     /** Changes the quantity of a food entry, scaling its nutrient snapshot. */
-    fun updateAmount(entry: LogEntry, amount: Double, time: LocalTime) {
-        if (amount <= 0 || entry.amount <= 0) return
-        val factor = amount / entry.amount
-        update(
-            entry.copy(
-                amount = amount,
-                time = time,
-                kcal = entry.kcal * factor,
-                protein = entry.protein * factor,
-                carbs = entry.carbs * factor,
-                fat = entry.fat * factor,
-            ),
-        )
-    }
+    fun updateAmount(entry: LogEntry, amount: Double, time: LocalTime) = update(entry.withAmount(amount).copy(time = time))
 
     /** Replaces the values of a quick-add entry. */
-    fun updateQuickAdd(entry: LogEntry, name: String, nutrients: Nutrients, time: LocalTime) {
-        update(
-            entry.copy(
-                name = name,
-                time = time,
-                kcal = nutrients.kcal,
-                protein = nutrients.protein,
-                carbs = nutrients.carbs,
-                fat = nutrients.fat,
-            ),
-        )
-    }
+    fun updateQuickAdd(entry: LogEntry, name: String, nutrients: Nutrients, time: LocalTime) =
+        update(entry.withValues(name, nutrients).copy(time = time))
 
     private fun update(entry: LogEntry) {
         viewModelScope.launch { logRepository.update(entry) }
@@ -147,7 +136,7 @@ class DiaryViewModel(
 
     companion object {
         val Factory = appViewModelFactory {
-            DiaryViewModel(it.logRepository, it.recipeRepository, it.weightRepository, it.diaryDate, it.settingsRepository)
+            DiaryViewModel(it.logRepository, it.recipeRepository, it.weightRepository, it.diaryDate, it.settingsRepository, it.preferencesRepository)
         }
     }
 }

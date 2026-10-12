@@ -102,7 +102,7 @@ fun LogRecipeScreen(viewModel: LogRecipeViewModel, onBack: () -> Unit, onSaved: 
                 }
             }
             Button(onClick = { vm.save(onSaved) }, enabled = vm.preview != null, modifier = Modifier.fillMaxWidth()) {
-                Text("Add to diary")
+                Text("Add")
             }
         }
     }

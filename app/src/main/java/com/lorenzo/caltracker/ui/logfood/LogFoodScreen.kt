@@ -127,7 +127,7 @@ fun LogFoodScreen(viewModel: LogFoodViewModel, onBack: () -> Unit, onSaved: () -
                 onClick = { viewModel.save(onSaved) },
                 enabled = preview != null,
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Add to diary") }
+            ) { Text("Add") }
         }
     }
 

@@ -56,3 +56,7 @@ data class RecipeEditorRoute(
 
 @Serializable
 data class LogRecipeRoute(val recipeId: Long, val epochDay: Long)
+
+/** Review the foods picked in Add food before logging them on [epochDay]. */
+@Serializable
+data class ReviewRoute(val epochDay: Long)

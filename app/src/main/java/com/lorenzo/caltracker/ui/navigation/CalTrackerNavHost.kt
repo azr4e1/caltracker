@@ -43,6 +43,8 @@ import com.lorenzo.caltracker.ui.recipe.LogRecipeViewModel
 import com.lorenzo.caltracker.ui.recipe.RecipeEditorScreen
 import com.lorenzo.caltracker.ui.recipe.RecipeEditorViewModel
 import com.lorenzo.caltracker.ui.quickadd.QuickAddViewModel
+import com.lorenzo.caltracker.ui.review.ReviewScreen
+import com.lorenzo.caltracker.ui.review.ReviewViewModel
 import com.lorenzo.caltracker.ui.settings.SettingsScreen
 import java.time.LocalDate
 import kotlin.reflect.KClass
@@ -146,8 +148,16 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                 LogRecipeScreen(
                     viewModel = viewModel(factory = LogRecipeViewModel.factory(route)),
                     onBack = navController::popBackStack,
-                    onSaved = navController::backToDiary,
+                    onSaved = navController::backToAddFood,
                     onEdit = { recipeId -> navController.navigate(RecipeEditorRoute(recipeId, route.epochDay)) },
+                )
+            }
+            composable<ReviewRoute> { entry ->
+                val route = entry.toRoute<ReviewRoute>()
+                ReviewScreen(
+                    viewModel = viewModel(factory = ReviewViewModel.factory(route)),
+                    onBack = navController::popBackStack,
+                    onConfirmed = navController::backToDiary,
                 )
             }
             composable<EditFoodRoute> { entry ->
@@ -189,6 +199,7 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                     onNewFood = { navController.navigate(NewFoodRoute(route.epochDay, forRecipe = route.forRecipe)) },
                     onRecipeSelected = { recipeId -> navController.navigate(LogRecipeRoute(recipeId, route.epochDay)) },
                     onNewRecipe = { navController.navigate(RecipeEditorRoute(epochDay = route.epochDay)) },
+                    onNext = { navController.navigate(ReviewRoute(route.epochDay)) },
                 )
             }
             composable<LogFoodRoute> { entry ->
@@ -196,7 +207,7 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                 LogFoodScreen(
                     viewModel = viewModel(factory = LogFoodViewModel.factory(route)),
                     onBack = navController::popBackStack,
-                    onSaved = navController::backToDiary,
+                    onSaved = navController::backToAddFood,
                     onEdit = { foodId -> navController.navigate(EditFoodRoute(foodId)) },
                 )
             }
@@ -205,7 +216,7 @@ fun CalTrackerNavHost(needsSetup: Boolean) {
                 QuickAddScreen(
                     viewModel = viewModel(factory = QuickAddViewModel.factory(route)),
                     onBack = navController::popBackStack,
-                    onSaved = navController::backToDiary,
+                    onSaved = navController::backToAddFood,
                 )
             }
             composable<NewFoodRoute> { entry ->
@@ -245,6 +256,11 @@ private fun NavHostController.navigateToTab(route: Any) {
         launchSingleTop = true
         restoreState = true
     }
+}
+
+/** After picking a food: back to the search, where the selection grows. */
+private fun NavHostController.backToAddFood() {
+    popBackStack<AddFoodRoute>(inclusive = false)
 }
 
 private fun NavHostController.backToDiary() {

@@ -11,6 +11,7 @@ import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.LogRepository
+import com.lorenzo.caltracker.data.repository.PendingLog
 import com.lorenzo.caltracker.domain.Nutrients
 import com.lorenzo.caltracker.domain.baseEntryUnit
 import com.lorenzo.caltracker.domain.nutrientsFor
@@ -26,6 +27,7 @@ class LogFoodViewModel(
     private val route: LogFoodRoute,
     private val foodRepository: FoodRepository,
     private val logRepository: LogRepository,
+    private val pendingLog: PendingLog,
 ) : ViewModel() {
     private val date: LocalDate = LocalDate.ofEpochDay(route.epochDay)
 
@@ -87,7 +89,7 @@ class LogFoodViewModel(
         val f = food ?: return
         val nutrients = preview ?: return
         viewModelScope.launch {
-            logRepository.add(
+            pendingLog.add(
                 LogEntry(
                     date = date,
                     time = time,
@@ -119,7 +121,7 @@ class LogFoodViewModel(
 
     companion object {
         fun factory(route: LogFoodRoute) = appViewModelFactory {
-            LogFoodViewModel(route, it.foodRepository, it.logRepository)
+            LogFoodViewModel(route, it.foodRepository, it.logRepository, it.pendingLog)
         }
     }
 }

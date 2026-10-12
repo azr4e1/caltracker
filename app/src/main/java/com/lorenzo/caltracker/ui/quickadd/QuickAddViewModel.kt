@@ -7,7 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.LogEntry
-import com.lorenzo.caltracker.data.repository.LogRepository
+import com.lorenzo.caltracker.data.repository.PendingLog
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import com.lorenzo.caltracker.ui.navigation.QuickAddRoute
 import com.lorenzo.caltracker.ui.toDecimalOrNull
@@ -15,7 +15,7 @@ import java.time.LocalDate
 import java.time.LocalTime
 import kotlinx.coroutines.launch
 
-class QuickAddViewModel(route: QuickAddRoute, private val logRepository: LogRepository) : ViewModel() {
+class QuickAddViewModel(route: QuickAddRoute, private val pendingLog: PendingLog) : ViewModel() {
     private val date = LocalDate.ofEpochDay(route.epochDay)
 
     var name by mutableStateOf("")
@@ -35,7 +35,7 @@ class QuickAddViewModel(route: QuickAddRoute, private val logRepository: LogRepo
         if (!isValid) return
         val (p, c, f) = macros.map { it ?: 0.0 }
         viewModelScope.launch {
-            logRepository.add(
+            pendingLog.add(
                 LogEntry(
                     date = date,
                     time = time,
@@ -53,6 +53,6 @@ class QuickAddViewModel(route: QuickAddRoute, private val logRepository: LogRepo
     }
 
     companion object {
-        fun factory(route: QuickAddRoute) = appViewModelFactory { QuickAddViewModel(route, it.logRepository) }
+        fun factory(route: QuickAddRoute) = appViewModelFactory { QuickAddViewModel(route, it.pendingLog) }
     }
 }

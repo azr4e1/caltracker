@@ -61,7 +61,7 @@ fun QuickAddScreen(viewModel: QuickAddViewModel, onBack: () -> Unit, onSaved: ()
                 enabled = viewModel.isValid,
                 onClick = { viewModel.save(onSaved) },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Add to diary") }
+            ) { Text("Add") }
         }
     }
 }
