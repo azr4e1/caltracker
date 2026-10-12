@@ -603,7 +603,12 @@ private fun RowScope.EntryContent(entry: LogEntry, indented: Boolean) {
         Text(entry.name, style = MaterialTheme.typography.bodyLarge)
         Text(entryDetails(entry), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    Text("${entry.kcal.formatWhole()} kcal", style = MaterialTheme.typography.bodyMedium)
+    // Inside a group the item's calories are secondary to the group total, like its time.
+    Text(
+        "${entry.kcal.formatWhole()} kcal",
+        style = if (indented) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodyMedium,
+        color = if (indented) MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f) else Color.Unspecified,
+    )
 }
 
 /** Summary line above a group of entries logged close together. */
