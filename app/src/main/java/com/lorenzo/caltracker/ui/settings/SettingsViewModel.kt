@@ -37,6 +37,10 @@ class SettingsViewModel(
 
     fun setGroupMinutes(minutes: Int) = preferences.setGroupMinutes(minutes)
 
+    val recentLimit: StateFlow<Int> = preferences.recentLimit
+
+    fun setRecentLimit(count: Int) = preferences.setRecentLimit(count)
+
     var editingUsdaKey by mutableStateOf(false)
     var checkingUsdaKey by mutableStateOf(false)
         private set

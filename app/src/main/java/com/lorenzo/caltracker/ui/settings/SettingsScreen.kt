@@ -88,22 +88,40 @@ fun SettingsScreen(
             ProfileCard(state.profile, onClick = onEditProfile)
             GoalsCard(state.goals, state.profile, onClick = onEditGoals)
             val groupMinutes by viewModel.groupMinutes.collectAsStateWithLifecycle()
-            var pickingGroup by remember { mutableStateOf(false) }
-
-            if (pickingGroup) {
-                GroupMinutesDialog(
+            val recentLimit by viewModel.recentLimit.collectAsStateWithLifecycle()
+            var picking by remember { mutableStateOf<GeneralOption?>(null) }
+            when (picking) {
+                GeneralOption.GROUP -> OptionsDialog(
+                    title = "Group diary entries",
+                    description = "Entries logged within this time of a group's first entry are shown together with their total.",
+                    options = PreferencesRepository.GROUP_MINUTE_OPTIONS,
                     current = groupMinutes,
-                    onDismiss = { pickingGroup = false },
+                    label = ::groupLabel,
+                    onDismiss = { picking = null },
                     onSelect = {
                         viewModel.setGroupMinutes(it)
-                        pickingGroup = false
+                        picking = null
                     },
                 )
+                GeneralOption.RECENT -> OptionsDialog(
+                    title = "Recent foods",
+                    description = "How many of your most recently logged foods are listed at the top of Add food.",
+                    options = PreferencesRepository.RECENT_LIMIT_OPTIONS,
+                    current = recentLimit,
+                    label = { "$it foods" },
+                    onDismiss = { picking = null },
+                    onSelect = {
+                        viewModel.setRecentLimit(it)
+                        picking = null
+                    },
+                )
+                null -> {}
             }
             val usdaKey by viewModel.usdaApiKey.collectAsStateWithLifecycle()
             GeneralCard(
                 listOf(
-                    SettingRow("Group diary entries within", groupLabel(groupMinutes)) { pickingGroup = true },
+                    SettingRow("Group diary entries within", groupLabel(groupMinutes)) { picking = GeneralOption.GROUP },
+                    SettingRow("Recent foods shown", "$recentLimit") { picking = GeneralOption.RECENT },
                     SettingRow("USDA API key", usdaKey?.let { "Your key ••••${it.takeLast(4)}" } ?: "Shared (limited)", viewModel::openUsdaKey),
                 ),
             )
@@ -315,28 +333,35 @@ private fun DeleteDataSection(onDelete: () -> Unit) {
 
 private fun groupLabel(minutes: Int) = if (minutes == 0) "Off (same minute only)" else "$minutes min"
 
+private enum class GeneralOption { GROUP, RECENT }
+
+/** Picks one of [options] with radio buttons; selecting closes the dialog. */
 @Composable
-private fun GroupMinutesDialog(current: Int, onDismiss: () -> Unit, onSelect: (Int) -> Unit) {
+private fun OptionsDialog(
+    title: String,
+    description: String,
+    options: List<Int>,
+    current: Int,
+    label: (Int) -> String,
+    onDismiss: () -> Unit,
+    onSelect: (Int) -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Group diary entries") },
+        title = { Text(title) },
         text = {
             Column {
-                Text(
-                    "Entries logged within this time of a group's first entry are shown together with their total.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.padding(bottom = 8.dp),
-                )
-                PreferencesRepository.GROUP_MINUTE_OPTIONS.forEach { minutes ->
+                Text(description, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(bottom = 8.dp))
+                options.forEach { option ->
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .selectable(selected = minutes == current, onClick = { onSelect(minutes) }, role = Role.RadioButton)
+                            .selectable(selected = option == current, onClick = { onSelect(option) }, role = Role.RadioButton)
                             .padding(vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        RadioButton(selected = minutes == current, onClick = null)
-                        Text(groupLabel(minutes), modifier = Modifier.padding(start = 12.dp))
+                        RadioButton(selected = option == current, onClick = null)
+                        Text(label(option), modifier = Modifier.padding(start = 12.dp))
                     }
                 }
             }

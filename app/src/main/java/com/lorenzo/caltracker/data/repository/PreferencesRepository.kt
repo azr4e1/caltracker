@@ -28,6 +28,16 @@ class PreferencesRepository(context: Context) {
         _groupMinutes.value = minutes
     }
 
+    private val _recentLimit = MutableStateFlow(prefs.getInt(KEY_RECENT_LIMIT, DEFAULT_RECENT_LIMIT))
+
+    /** How many foods the Recent section in Add food shows. */
+    val recentLimit: StateFlow<Int> = _recentLimit.asStateFlow()
+
+    fun setRecentLimit(count: Int) {
+        prefs.edit { putInt(KEY_RECENT_LIMIT, count) }
+        _recentLimit.value = count
+    }
+
     fun setUsdaApiKey(key: String?) {
         val value = key?.trim()?.ifEmpty { null }
         prefs.edit { if (value == null) remove(KEY_USDA) else putString(KEY_USDA, value) }
@@ -37,7 +47,10 @@ class PreferencesRepository(context: Context) {
     companion object {
         private const val KEY_USDA = "usdaApiKey"
         private const val KEY_GROUP_MINUTES = "groupMinutes"
-        const val DEFAULT_GROUP_MINUTES = 15
+        private const val KEY_RECENT_LIMIT = "recentLimit"
+        const val DEFAULT_GROUP_MINUTES = 10
+        const val DEFAULT_RECENT_LIMIT = 10
+        val RECENT_LIMIT_OPTIONS = listOf(5, 10, 15, 20, 30)
         val GROUP_MINUTE_OPTIONS = listOf(0, 5, 10, 15, 30, 60)
     }
 }

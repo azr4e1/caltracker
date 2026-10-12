@@ -447,45 +447,48 @@ private fun DayPage(
 ) {
     if (entries == null) return
     val items = remember(entries, groupMinutes) { timelineItems(entries, groupMinutes) }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 88.dp)) {
-        item { GoalsCard(entries.totalNutrients(), goals) }
-        if (entries.isEmpty()) {
-            item {
-                Text(
-                    "Nothing logged. Tap + to add food.\nSwipe left or right to change day.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().padding(32.dp),
-                )
+    // The goals card stays put; only the entries below it scroll.
+    Column(Modifier.fillMaxSize()) {
+        GoalsCard(entries.totalNutrients(), goals)
+        LazyColumn(Modifier.fillMaxWidth().weight(1f), contentPadding = PaddingValues(bottom = 88.dp)) {
+            if (entries.isEmpty()) {
+                item {
+                    Text(
+                        "Nothing logged. Tap + to add food.\nSwipe left or right to change day.",
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    )
+                }
             }
-        }
-        itemsIndexed(items, key = { _, item -> item.key }) { index, item ->
-            val isFirst = index == 0
-            val isLast = index == items.lastIndex
-            when (item) {
-                is TimelineItem.Header -> {
-                    val group = item.entries
-                    TimelineRow(
-                        time = group.first().time,
-                        timeMuted = false,
-                        dot = true,
+            itemsIndexed(items, key = { _, item -> item.key }) { index, item ->
+                val isFirst = index == 0
+                val isLast = index == items.lastIndex
+                when (item) {
+                    is TimelineItem.Header -> {
+                        val group = item.entries
+                        TimelineRow(
+                            time = group.first().time,
+                            timeMuted = false,
+                            dot = true,
+                            isFirst = isFirst,
+                            isLast = isLast,
+                            selected = group.all { it.id in selectedIds },
+                            onClick = { onGroupClick(group) },
+                            onLongClick = { onGroupLongClick(group) },
+                        ) { GroupHeaderContent(group) }
+                    }
+                    is TimelineItem.Entry -> TimelineRow(
+                        time = item.time,
+                        timeMuted = item.inGroup,
+                        dot = item.dot,
                         isFirst = isFirst,
                         isLast = isLast,
-                        selected = group.all { it.id in selectedIds },
-                        onClick = { onGroupClick(group) },
-                        onLongClick = { onGroupLongClick(group) },
-                    ) { GroupHeaderContent(group) }
+                        selected = item.entry.id in selectedIds,
+                        onClick = { onClick(item.entry) },
+                        onLongClick = { onLongClick(item.entry) },
+                    ) { EntryContent(item.entry, indented = item.inGroup) }
                 }
-                is TimelineItem.Entry -> TimelineRow(
-                    time = item.time,
-                    timeMuted = item.inGroup,
-                    dot = item.dot,
-                    isFirst = isFirst,
-                    isLast = isLast,
-                    selected = item.entry.id in selectedIds,
-                    onClick = { onClick(item.entry) },
-                    onLongClick = { onLongClick(item.entry) },
-                ) { EntryContent(item.entry, indented = item.inGroup) }
             }
         }
     }

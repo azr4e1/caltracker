@@ -13,6 +13,7 @@ import com.lorenzo.caltracker.data.repository.FoodRepository
 import com.lorenzo.caltracker.data.repository.OnlineFoodRepository
 import com.lorenzo.caltracker.data.repository.PendingItem
 import com.lorenzo.caltracker.data.repository.PendingLog
+import com.lorenzo.caltracker.data.repository.PreferencesRepository
 import com.lorenzo.caltracker.data.repository.RecipeRepository
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -57,7 +58,10 @@ class AddFoodViewModel(
     recipeRepository: RecipeRepository,
     private val onlineFoods: OnlineFoodRepository,
     private val pendingLog: PendingLog,
+    preferences: PreferencesRepository,
 ) : ViewModel() {
+    private val recentLimit = preferences.recentLimit
+
     /** Foods picked but not logged yet. */
     val pending: StateFlow<List<PendingItem>> = pendingLog.items
 
@@ -75,7 +79,7 @@ class AddFoodViewModel(
 
     val uiState: StateFlow<AddFoodUiState> = combine(
         query.asStateFlow(),
-        foodRepository.observeRecent(),
+        recentLimit.flatMapLatest { foodRepository.observeRecent(it) },
         foodRepository.observeAll(),
         results,
         recipes,
@@ -157,6 +161,6 @@ class AddFoodViewModel(
     }
 
     companion object {
-        val Factory = appViewModelFactory { AddFoodViewModel(it.foodRepository, it.recipeRepository, it.onlineFoodRepository, it.pendingLog) }
+        val Factory = appViewModelFactory { AddFoodViewModel(it.foodRepository, it.recipeRepository, it.onlineFoodRepository, it.pendingLog, it.preferencesRepository) }
     }
 }
