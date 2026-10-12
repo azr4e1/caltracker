@@ -44,7 +44,7 @@ fun StackedProgress(label: String, base: Double, added: Double, goal: Double, un
             }
         }
         Text(
-            "${base.formatWhole()} + ${added.formatWhole()} / ${goal.formatWhole()} $unit",
+            "+${added.formatWhole()} $unit",
             style = MaterialTheme.typography.bodySmall,
             color = if (over) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
         )

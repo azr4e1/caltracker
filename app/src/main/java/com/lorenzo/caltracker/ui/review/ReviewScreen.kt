@@ -54,14 +54,15 @@ import com.lorenzo.caltracker.ui.theme.macroColors
 import com.lorenzo.caltracker.ui.unitLabel
 import kotlinx.coroutines.launch
 
-private enum class ChartStyle(val label: String) { DONUT("Donut"), BARS("Bars") }
+/** Goals: the day's progress with this selection added. Split: where this selection's calories come from. */
+private enum class ChartStyle(val label: String) { GOALS("Goals"), SPLIT("Split") }
 
 /** The foods picked in Add food, with their totals; Confirm logs them all. */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReviewScreen(viewModel: ReviewViewModel, onBack: () -> Unit, onConfirmed: () -> Unit) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var chart by rememberSaveable { mutableStateOf(ChartStyle.DONUT) }
+    var chart by rememberSaveable { mutableStateOf(ChartStyle.GOALS) }
     var editing by remember { mutableStateOf<PendingItem?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -104,8 +105,8 @@ fun ReviewScreen(viewModel: ReviewViewModel, onBack: () -> Unit, onConfirmed: ()
                             }
                         }
                         when (chart) {
-                            ChartStyle.DONUT -> MacroDonut(state.selection, macroColors(), Modifier.fillMaxWidth())
-                            ChartStyle.BARS -> Bars(state)
+                            ChartStyle.GOALS -> Bars(state)
+                            ChartStyle.SPLIT -> MacroDonut(state.selection, macroColors(), Modifier.fillMaxWidth())
                         }
                     }
                 }

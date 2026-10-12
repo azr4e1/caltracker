@@ -24,6 +24,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -47,6 +48,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -200,14 +202,19 @@ private fun scanBarcode(context: Context, onScanned: (String) -> Unit, onError: 
         .addOnFailureListener { onError("Scanner unavailable: ${it.message}") }
 }
 
+/** A section title with a divider above it, so sections are easy to tell apart. */
 private fun LazyListScope.sectionHeader(key: String, title: String) {
     item(key = "header-$key") {
-        Text(
-            title,
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
-        )
+        Column(Modifier.padding(top = 12.dp)) {
+            HorizontalDivider()
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp),
+            )
+        }
     }
 }
 
@@ -221,13 +228,16 @@ private fun unitLabel(unit: BaseUnit) = if (unit == BaseUnit.ML) "ml" else "g"
 
 private fun LazyListScope.recipeSection(recipes: List<RecipeWithIngredients>, onClick: (Long) -> Unit, onNewRecipe: () -> Unit) {
     item(key = "header-recipes") {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text("Recipes", style = MaterialTheme.typography.titleSmall, color = MaterialTheme.colorScheme.primary)
-            TextButton(onClick = onNewRecipe) { Text("New recipe") }
+        Column(Modifier.padding(top = 12.dp)) {
+            HorizontalDivider()
+            Row(
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text("Recipes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+                TextButton(onClick = onNewRecipe) { Text("New recipe") }
+            }
         }
     }
     if (recipes.isEmpty()) message("empty-recipes", "Group foods you often eat together, e.g. your usual breakfast.")
