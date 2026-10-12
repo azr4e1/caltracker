@@ -618,12 +618,10 @@ private fun RowScope.EntryContent(entry: LogEntry, indented: Boolean) {
 @Composable
 private fun RowScope.GroupHeaderContent(group: List<LogEntry>) {
     val total = group.totalNutrients()
-    val range = "${group.first().time.formatHm()}–${group.last().time.formatHm()}"
     Column(Modifier.weight(1f)) {
         Text(plural(group.size, "item", "items"), style = MaterialTheme.typography.titleSmall)
         Text(
-            listOfNotNull(range.takeIf { group.first().time != group.last().time }, "P ${total.protein.formatWhole()} · C ${total.carbs.formatWhole()} · F ${total.fat.formatWhole()}")
-                .joinToString(" · "),
+            "P ${total.protein.formatWhole()} · C ${total.carbs.formatWhole()} · F ${total.fat.formatWhole()}",
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

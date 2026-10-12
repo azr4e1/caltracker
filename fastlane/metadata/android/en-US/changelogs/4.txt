@@ -1,0 +1,1 @@
+- Grouped diary entries show only protein, carbs and fat under the item count, without the time range
