@@ -62,6 +62,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
@@ -94,6 +95,7 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import kotlin.math.abs
+import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.launch
 
 // The pager has one page per day; the middle page is the day the screen was opened.
@@ -129,14 +131,16 @@ fun DiaryScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    val anchor = remember { LocalDate.now() }
+    // Saved with the pager's page, so a restored page still maps to the same day after midnight.
+    val anchor = rememberSaveable { LocalDate.now() }
     fun dateFor(page: Int): LocalDate = anchor.plusDays((page - CENTER_PAGE).toLong())
     fun pageFor(date: LocalDate): Int = CENTER_PAGE + ChronoUnit.DAYS.between(anchor, date).toInt()
     val pagerState = rememberPagerState(initialPage = pageFor(selectedDate)) { PAGE_COUNT }
 
-    // Swiping changes the selected day...
+    // Swiping changes the selected day. The first value is skipped: when the Diary tab is restored,
+    // it's the page shown last time and would override a day just picked in History.
     LaunchedEffect(pagerState) {
-        snapshotFlow { pagerState.settledPage }.collect { viewModel.selectDate(dateFor(it)) }
+        snapshotFlow { pagerState.settledPage }.drop(1).collect { viewModel.selectDate(dateFor(it)) }
     }
     // ...and arrows, the date picker or History move the pager.
     LaunchedEffect(selectedDate) {

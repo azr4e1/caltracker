@@ -36,7 +36,8 @@ enum class HistoryRange(val days: Int, val label: String) {
 /**
  * One column of the chart. Calories are split by where they come from: protein, carbs and fat
  * (grams × 4/4/9), plus "other" for calories not explained by macros, such as a quick add
- * with only calories, fiber or alcohol.
+ * with only calories, fiber or alcohol. The column is as tall as the logged calories: labels
+ * don't follow 4/4/9 exactly, so when the macros add up to more, their segments shrink to fit.
  */
 data class DayColumn(
     val date: LocalDate,
@@ -45,10 +46,15 @@ data class DayColumn(
     val carbs: Double,
     val fat: Double,
 ) {
-    val proteinKcal get() = protein * KCAL_PER_G_PROTEIN
-    val carbsKcal get() = carbs * KCAL_PER_G_CARBS
-    val fatKcal get() = fat * KCAL_PER_G_FAT
-    val otherKcal get() = (kcal - GoalCalculator.kcalFromMacros(protein, carbs, fat)).coerceAtLeast(0.0)
+    private val macroKcal get() = GoalCalculator.kcalFromMacros(protein, carbs, fat)
+
+    /** Shrinks the macro segments to the logged calories when they add up to more. */
+    private val macroScale get() = if (kcal > 0 && macroKcal > kcal) kcal / macroKcal else 1.0
+
+    val proteinKcal get() = protein * KCAL_PER_G_PROTEIN * macroScale
+    val carbsKcal get() = carbs * KCAL_PER_G_CARBS * macroScale
+    val fatKcal get() = fat * KCAL_PER_G_FAT * macroScale
+    val otherKcal get() = (kcal - macroKcal).coerceAtLeast(0.0)
 
     /** Height of the stacked column. */
     val stackKcal get() = proteinKcal + carbsKcal + fatKcal + otherKcal

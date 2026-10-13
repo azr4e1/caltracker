@@ -1,0 +1,2 @@
+- History columns are as tall as the calories you logged; when label macros add up to more, the protein, carbs and fat segments shrink to fit
+- Tapping a day in History opens that day in the diary instead of today
