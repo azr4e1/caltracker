@@ -23,7 +23,7 @@ class ExportRepository(
     suspend fun exportExcel(uri: Uri): Int = withContext(Dispatchers.IO) {
         val entries = logRepository.getAll()
         val output = context.contentResolver.openOutputStream(uri, "wt") ?: error("Cannot open file for writing")
-        output.use { ExcelExporter.write(it, entries, foodRepository.getAll(), recipeRepository.getAll(), weightRepository.getAll(), settingsRepository.goals.first()) }
+        output.use { ExcelExporter.write(it, entries, foodRepository.getAll(), recipeRepository.getAll(), weightRepository.getAll(), settingsRepository.goalHistory.first()) }
         entries.size
     }
 }

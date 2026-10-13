@@ -28,6 +28,7 @@ class BackupRepository(private val context: Context, private val database: AppDa
             profile = dao.profile(),
             goals = dao.goals(),
             weightEntries = dao.weightEntries(),
+            goalHistory = dao.goalHistory(),
         )
         val output = context.contentResolver.openOutputStream(uri, "wt") ?: error("Cannot open file for writing")
         output.bufferedWriter().use { it.write(json.encodeToString(Backup.serializer(), backup)) }

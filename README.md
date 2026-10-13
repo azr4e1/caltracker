@@ -18,8 +18,8 @@ A calorie and macro tracker for Android that keeps your data on your phone. No a
 - **Quick add** calories and macros without creating a food.
 - **Recipes.** Group foods, log portions or grams (with an optional cooked weight), split a logged recipe back into ingredients, or turn selected diary entries into a recipe.
 - **Edit the diary freely.** Change amounts and times, duplicate, copy or move entries to another day, copy a whole day, undo deletes.
-- **Goals.** Set your calories and get protein, carbs and fat calculated from your weight (Mifflin-St Jeor), or set everything yourself.
-- **History.** Stacked column chart of daily calories by macro with your goal line, and a weight chart with a 7-day average. Logging your weight keeps calculated macros up to date.
+- **Goals.** Set your calories and get protein, carbs and fat calculated from your weight (Mifflin-St Jeor), or set everything yourself. Goals are kept per day, so changing them never rewrites past days.
+- **History.** Stacked column chart of daily calories by macro with each day's goal line, and a weight chart with a 7-day average. Logging your weight keeps calculated macros up to date.
 - **Home-screen widget** with today's calories and macros.
 - **Your data stays yours.** JSON backup/restore to move phones, and export to Excel (`.xlsx`) for your own analysis.
 

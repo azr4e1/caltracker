@@ -5,6 +5,7 @@ import com.lorenzo.caltracker.data.db.dao.RecipeWithIngredients
 import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.Food
 import com.lorenzo.caltracker.data.db.entity.Goals
+import com.lorenzo.caltracker.domain.GoalHistory
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Recipe
 import com.lorenzo.caltracker.data.db.entity.RecipeIngredient
@@ -36,7 +37,7 @@ class ExcelExporterTest {
         )
 
         val file = File.createTempFile("export", ".xlsx").apply { deleteOnExit() }
-        file.outputStream().use { ExcelExporter.write(it, entries, foods, recipes, listOf(WeightEntry(date = day, weightKg = 92.4)), goals) }
+        file.outputStream().use { ExcelExporter.write(it, entries, foods, recipes, listOf(WeightEntry(date = day, weightKg = 92.4)), GoalHistory(goals, emptyList())) }
 
         // Read via the central directory, like Excel does (the zip is written in streaming mode).
         val files = ZipFile(file).use { zip ->

@@ -3,7 +3,7 @@ package com.lorenzo.caltracker.data.export
 import com.lorenzo.caltracker.data.db.dao.RecipeWithIngredients
 import com.lorenzo.caltracker.data.db.entity.EntryUnit
 import com.lorenzo.caltracker.data.db.entity.Food
-import com.lorenzo.caltracker.data.db.entity.Goals
+import com.lorenzo.caltracker.domain.GoalHistory
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.WeightEntry
 import com.lorenzo.caltracker.domain.nutrientsFor
@@ -26,7 +26,7 @@ object ExcelExporter {
         foods: List<Food>,
         recipes: List<RecipeWithIngredients>,
         weights: List<WeightEntry>,
-        goals: Goals?,
+        goals: GoalHistory,
     ) {
         val workbook = Workbook(output, "CalTracker", "1.0")
         writeEntries(workbook.newWorksheet("Entries"), entries)
@@ -62,17 +62,23 @@ object ExcelExporter {
         widths(ws, 12, 8, 30, 9, 9, 9, 12, 11, 9, 11)
     }
 
-    private fun writeDailyTotals(ws: Worksheet, entries: List<LogEntry>, goals: Goals?) {
-        header(ws, "Date", "kcal", "Protein (g)", "Carbs (g)", "Fat (g)", "Entries", "Goal kcal", "Difference")
+    /** One row per logged day, with the goals in force that day. */
+    private fun writeDailyTotals(ws: Worksheet, entries: List<LogEntry>, history: GoalHistory) {
+        header(
+            ws, "Date", "kcal", "Protein (g)", "Carbs (g)", "Fat (g)", "Entries", "Goal kcal", "Difference",
+            "Goal protein (g)", "Goal carbs (g)", "Goal fat (g)",
+        )
         entries.groupBy { it.date }.toSortedMap().entries.forEachIndexed { i, (date, day) ->
             val r = i + 1
             val kcal = day.sumOf { it.kcal }
             date(ws, r, 0, date)
             numbers(ws, r, 1, kcal, day.sumOf { it.protein }, day.sumOf { it.carbs }, day.sumOf { it.fat })
             ws.value(r, 5, day.size)
-            if (goals != null) numbers(ws, r, 6, goals.kcal, kcal - goals.kcal)
+            history.on(date)?.let { goals ->
+                numbers(ws, r, 6, goals.kcal, kcal - goals.kcal, goals.protein, goals.carbs, goals.fat)
+            }
         }
-        widths(ws, 12, 9, 12, 11, 9, 9, 10, 11)
+        widths(ws, 12, 9, 12, 11, 9, 9, 10, 11, 16, 14, 12)
     }
 
     private fun writeFoods(ws: Worksheet, foods: List<Food>) {

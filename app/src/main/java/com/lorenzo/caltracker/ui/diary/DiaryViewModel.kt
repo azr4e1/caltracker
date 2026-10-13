@@ -22,9 +22,11 @@ import com.lorenzo.caltracker.domain.withValues
 import com.lorenzo.caltracker.ui.appViewModelFactory
 import java.time.LocalDate
 import java.time.LocalTime
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -42,7 +44,9 @@ class DiaryViewModel(
 
     val selectedDate: StateFlow<LocalDate> = dateHolder.date
 
-    val goals: StateFlow<Goals?> = settingsRepository.goals
+    /** Goals of the selected day: past days keep the targets they had. */
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val goals: StateFlow<Goals?> = dateHolder.date.flatMapLatest { settingsRepository.goalsOn(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     val weights: StateFlow<List<WeightEntry>> = weightRepository.observeAll()

@@ -1,0 +1,3 @@
+- Goals are kept per day: changing your calorie goal or logging a weight only affects today and later days, so past days keep the targets they had
+- History draws each day's goal, stepping where it changed; the day details show that day's targets
+- The Excel export includes each day's goals; backups include the goal history

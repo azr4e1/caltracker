@@ -45,7 +45,7 @@ class ReviewViewModel(
     val uiState: StateFlow<ReviewUiState> = combine(
         pendingLog.items.map { items -> items.sortedWith(compareBy({ it.entry.time }, { it.key })) },
         logRepository.observeDay(date).map { it.totalNutrients() },
-        settingsRepository.goals,
+        settingsRepository.goalsOn(date),
         ::ReviewUiState,
     ).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReviewUiState())
 

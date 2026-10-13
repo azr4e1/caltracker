@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
@@ -136,7 +137,6 @@ private fun CalorieHistory(state: HistoryUiState, onRangeChange: (HistoryRange) 
                 CalorieChart(
                     days = state.days,
                     visibleCount = state.range.days,
-                    goalKcal = state.goals?.kcal,
                     colors = colors,
                     selectedIndex = selectedIndex,
                     onSelect = { selectedIndex = it },
@@ -151,7 +151,7 @@ private fun CalorieHistory(state: HistoryUiState, onRangeChange: (HistoryRange) 
                 if (selected != null) {
                     SelectedDayCard(selected, colors, onOpen = { onOpenDay(selected.date) })
                 } else {
-                    SummaryCard(visibleDays, state.goals?.kcal, canScroll = state.days.size > state.range.days)
+                    SummaryCard(visibleDays, canScroll = state.days.size > state.range.days)
                 }
                 SectionTitle("Logged days")
             }
@@ -323,9 +323,11 @@ private fun LegendItem(color: Color, label: String) {
 
 /** Averages over the days currently on screen. */
 @Composable
-private fun SummaryCard(days: List<DayColumn>, goalKcal: Double?, canScroll: Boolean) {
+private fun SummaryCard(days: List<DayColumn>, canScroll: Boolean) {
     val logged = days.filter { it.isLogged }
     val average = logged.takeIf { it.isNotEmpty() }?.map { it.kcal }?.average()
+    // Each day is compared with the goal it had.
+    val averageDiff = logged.mapNotNull { day -> day.goals?.let { day.kcal - it.kcal } }.takeIf { it.isNotEmpty() }?.average()
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             if (days.isNotEmpty()) {
@@ -339,8 +341,8 @@ private fun SummaryCard(days: List<DayColumn>, goalKcal: Double?, canScroll: Boo
                 if (average != null) "Average ${average.formatWhole()} kcal/day" else "Nothing logged",
                 style = MaterialTheme.typography.titleMedium,
             )
-            if (average != null && goalKcal != null) {
-                val diff = average - goalKcal
+            if (averageDiff != null) {
+                val diff = averageDiff
                 Text(
                     if (diff <= 0) "${(-diff).formatWhole()} kcal below goal on average" else "${diff.formatWhole()} kcal above goal on average",
                     style = MaterialTheme.typography.bodyMedium,
@@ -361,13 +363,19 @@ private fun SelectedDayCard(day: DayColumn, colors: MacroColors, onOpen: () -> U
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text(dateLabel(day.date), style = MaterialTheme.typography.titleMedium)
-                Text("${day.kcal.formatWhole()} kcal", style = MaterialTheme.typography.titleMedium)
+                val goals = day.goals
+                Text(
+                    "${day.kcal.formatWhole()}" + (goals?.let { " / ${it.kcal.formatWhole()}" } ?: "") + " kcal",
+                    style = MaterialTheme.typography.titleMedium,
+                )
             }
             if (day.isLogged) {
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    LegendItem(colors.protein, "${day.protein.formatWhole()} g")
-                    LegendItem(colors.carbs, "${day.carbs.formatWhole()} g")
-                    LegendItem(colors.fat, "${day.fat.formatWhole()} g")
+                val goals = day.goals
+                fun amount(grams: Double, target: Double?) = grams.formatWhole() + (target?.let { " / ${it.formatWhole()}" } ?: "") + " g"
+                FlowRow(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    LegendItem(colors.protein, amount(day.protein, goals?.protein))
+                    LegendItem(colors.carbs, amount(day.carbs, goals?.carbs))
+                    LegendItem(colors.fat, amount(day.fat, goals?.fat))
                     if (day.otherKcal >= 1) LegendItem(colors.other, "${day.otherKcal.formatWhole()} kcal other")
                 }
             } else {

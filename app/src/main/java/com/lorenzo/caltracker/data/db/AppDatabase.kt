@@ -12,6 +12,7 @@ import com.lorenzo.caltracker.data.db.dao.RecipeDao
 import com.lorenzo.caltracker.data.db.dao.SettingsDao
 import com.lorenzo.caltracker.data.db.dao.WeightDao
 import com.lorenzo.caltracker.data.db.entity.Food
+import com.lorenzo.caltracker.data.db.entity.GoalPeriod
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Profile
@@ -27,6 +28,7 @@ import com.lorenzo.caltracker.data.db.entity.WeightEntry
         LogEntry::class,
         Profile::class,
         Goals::class,
+        GoalPeriod::class,
         WeightEntry::class,
     ],
     version = AppDatabase.VERSION,
@@ -42,7 +44,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun weightDao(): WeightDao
 
     companion object {
-        const val VERSION = 4
+        const val VERSION = 5
 
 
         fun create(context: Context): AppDatabase =

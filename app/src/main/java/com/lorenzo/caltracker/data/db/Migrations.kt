@@ -33,8 +33,25 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
     }
 }
 
+/**
+ * 4 -> 5: goals are kept per day. The current goals become the first row, in force from
+ * [GoalPeriod.BEGINNING], so every past day keeps them when the goals next change.
+ */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE IF NOT EXISTS `goal_history` (`date` TEXT NOT NULL, `kcal` REAL NOT NULL, `protein` REAL NOT NULL, " +
+                "`carbs` REAL NOT NULL, `fat` REAL NOT NULL, PRIMARY KEY(`date`))",
+        )
+        db.execSQL(
+            "INSERT INTO goal_history (date, kcal, protein, carbs, fat) " +
+                "SELECT '1970-01-01', kcal, protein, carbs, fat FROM goals WHERE id = 1",
+        )
+    }
+}
+
 /** Shared with backup restore, so old backups get the same fix. */
 const val QUICK_ADD_UNIT_SQL =
     "UPDATE log_entries SET unit = 'QUICK' WHERE foodId IS NULL AND recipeId IS NULL AND unit = 'SERVING'"
 
-val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+val ALL_MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)

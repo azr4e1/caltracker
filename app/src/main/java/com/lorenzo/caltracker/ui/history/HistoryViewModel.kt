@@ -10,6 +10,7 @@ import com.lorenzo.caltracker.data.repository.LogRepository
 import com.lorenzo.caltracker.data.repository.SettingsRepository
 import com.lorenzo.caltracker.data.repository.WeightRepository
 import com.lorenzo.caltracker.domain.GoalCalculator
+import com.lorenzo.caltracker.domain.GoalHistory
 import com.lorenzo.caltracker.domain.Nutrients.Companion.KCAL_PER_G_CARBS
 import com.lorenzo.caltracker.domain.Nutrients.Companion.KCAL_PER_G_FAT
 import com.lorenzo.caltracker.domain.Nutrients.Companion.KCAL_PER_G_PROTEIN
@@ -45,6 +46,8 @@ data class DayColumn(
     val protein: Double,
     val carbs: Double,
     val fat: Double,
+    /** The goals in force that day. */
+    val goals: Goals? = null,
 ) {
     private val macroKcal get() = GoalCalculator.kcalFromMacros(protein, carbs, fat)
 
@@ -66,7 +69,6 @@ data class HistoryUiState(
     val range: HistoryRange = HistoryRange.WEEK,
     /** Every day from the first logged day or weigh-in (or at least 90 days back) to today, oldest first. */
     val days: List<DayColumn> = emptyList(),
-    val goals: Goals? = null,
     /** Weigh-ins, oldest first. */
     val weights: List<WeightEntry> = emptyList(),
     val profileWeightKg: Double? = null,
@@ -89,12 +91,13 @@ class HistoryViewModel(
 
     private val allDays = start.flatMapLatest { from ->
         val today = LocalDate.now()
-        logRepository.observeDailyTotals(from, today).map { fillDays(from, today, it) }
+        combine(logRepository.observeDailyTotals(from, today), settingsRepository.goalHistory) { totals, goals ->
+            fillDays(from, today, totals, goals)
+        }
     }
 
-    val uiState: StateFlow<HistoryUiState> = combine(range, allDays, settingsRepository.goals, weights, settingsRepository.profile) {
-            r, days, goals, weighIns, profile ->
-        HistoryUiState(r, days, goals, weighIns, profile?.weightKg)
+    val uiState: StateFlow<HistoryUiState> = combine(range, allDays, weights, settingsRepository.profile) { r, days, weighIns, profile ->
+        HistoryUiState(r, days, weighIns, profile?.weightKg)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HistoryUiState())
 
     /** Saves a weigh-in; when editing one and its date changed, the old one is replaced. */
@@ -120,11 +123,11 @@ class HistoryViewModel(
     /** Selects [date] in the Diary; the screen then switches tabs. */
     fun openInDiary(date: LocalDate) = diaryDate.select(date)
 
-    private fun fillDays(start: LocalDate, end: LocalDate, totals: List<DailyTotal>): List<DayColumn> {
+    private fun fillDays(start: LocalDate, end: LocalDate, totals: List<DailyTotal>, goals: GoalHistory): List<DayColumn> {
         val byDate = totals.associateBy { it.date }
         return generateSequence(start) { it.plusDays(1) }.takeWhile { !it.isAfter(end) }.map { date ->
             val t = byDate[date]
-            DayColumn(date, t?.kcal ?: 0.0, t?.protein ?: 0.0, t?.carbs ?: 0.0, t?.fat ?: 0.0)
+            DayColumn(date, t?.kcal ?: 0.0, t?.protein ?: 0.0, t?.carbs ?: 0.0, t?.fat ?: 0.0, goals.on(date))
         }.toList()
     }
 

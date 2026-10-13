@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -43,8 +44,8 @@ private val CORNER = 4.dp
 private val MAX_COLUMN_WIDTH = 28.dp
 
 /**
- * Stacked column chart of calories per day, split into protein / carbs / fat / other, with the
- * calorie goal as a dashed line. Shows [visibleCount] days at a time, ending today; drag
+ * Stacked column chart of calories per day, split into protein / carbs / fat / other, with each
+ * day's calorie goal as a dashed line that steps where the goal changed. Shows [visibleCount] days at a time, ending today; drag
  * horizontally to see earlier days. Tapping a column selects it, tapping it again deselects.
  *
  * @param days every day that can be shown, oldest first, ending today.
@@ -54,7 +55,6 @@ private val MAX_COLUMN_WIDTH = 28.dp
 fun CalorieChart(
     days: List<DayColumn>,
     visibleCount: Int,
-    goalKcal: Double?,
     colors: MacroColors,
     selectedIndex: Int?,
     onSelect: (Int?) -> Unit,
@@ -107,7 +107,8 @@ fun CalorieChart(
 
         // The y-axis fits the days on screen once the scroll settles, so it doesn't jump while dragging.
         val settled = visibleRange(days.size, visibleCount, daysBack.targetValue.roundToInt())
-        val maxValue = max(settled.maxOfOrNull { days[it].stackKcal } ?: 0.0, goalKcal ?: 0.0).coerceAtLeast(500.0) * 1.05
+        val maxGoal = settled.maxOfOrNull { days[it].goals?.kcal ?: 0.0 } ?: 0.0
+        val maxValue = max(settled.maxOfOrNull { days[it].stackKcal } ?: 0.0, maxGoal).coerceAtLeast(500.0) * 1.05
         val step = niceStep(maxValue)
         val yMax = ceil(maxValue / step) * step
         fun y(kcal: Double) = (plotBottom - kcal / yMax * plotHeight).toFloat()
@@ -155,16 +156,33 @@ fun CalorieChart(
             )
         }
 
-        // Goal line, drawn over the columns with a surface halo so it stays visible
-        if (goalKcal != null && goalKcal > 0) {
-            val gy = y(goalKcal)
-            drawLine(surface, Offset(left, gy), Offset(size.width, gy), strokeWidth = 4.dp.toPx())
-            drawLine(
-                goalColor, Offset(left, gy), Offset(size.width, gy),
-                strokeWidth = 1.5.dp.toPx(),
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx())),
+        // Goal line: each day's goal, stepping where it changed. Drawn over the columns with a
+        // surface halo so it stays visible.
+        val goalPath = Path()
+        var previousGoal: Double? = null
+        for (i in drawn) {
+            val goal = days[i].goals?.kcal?.takeIf { it > 0 }
+            if (goal == null) {
+                previousGoal = null
+                continue
+            }
+            val gy = y(goal)
+            if (previousGoal == null) goalPath.moveTo(x(i), gy) else goalPath.lineTo(x(i), gy)
+            goalPath.lineTo(x(i) + slotPx, gy)
+            previousGoal = goal
+        }
+        clipRect(left = left, top = 0f, right = size.width, bottom = size.height) {
+            drawPath(goalPath, surface, style = Stroke(width = 4.dp.toPx()))
+            drawPath(
+                goalPath, goalColor,
+                style = Stroke(width = 1.5.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))),
             )
-            val label = textMeasurer.measure("Goal ${goalKcal.formatWhole()}", labelStyle)
+        }
+        // Labelled with the goal of the rightmost day on screen.
+        val labelGoal = days[settled.last].goals?.kcal
+        if (labelGoal != null && labelGoal > 0) {
+            val gy = y(labelGoal)
+            val label = textMeasurer.measure("Goal ${labelGoal.formatWhole()}", labelStyle)
             val lx = size.width - label.size.width
             drawRect(surface, Offset(lx - 4.dp.toPx(), gy - label.size.height - 2.dp.toPx()), Size(label.size.width + 4.dp.toPx(), label.size.height.toFloat()))
             drawText(label, topLeft = Offset(lx, gy - label.size.height - 2.dp.toPx()))

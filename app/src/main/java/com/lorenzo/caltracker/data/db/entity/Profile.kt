@@ -54,3 +54,23 @@ data class Goals(
     /** Used in AUTO mode: share of calories from fat (0..1). */
     val fatShare: Double = 0.25,
 )
+
+/**
+ * The targets in force from [date] until the next row. A row is written (or replaced) for today
+ * whenever the goals change, so past days keep the targets they had. Days before the first row
+ * use the first row.
+ */
+@Serializable
+@Entity(tableName = "goal_history")
+data class GoalPeriod(
+    @PrimaryKey val date: LocalDate,
+    val kcal: Double,
+    val protein: Double,
+    val carbs: Double,
+    val fat: Double,
+) {
+    companion object {
+        /** Start of goals carried over from before goals were kept per day. */
+        val BEGINNING: LocalDate = LocalDate.of(1970, 1, 1)
+    }
+}

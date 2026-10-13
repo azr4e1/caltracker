@@ -1,6 +1,7 @@
 package com.lorenzo.caltracker.data.backup
 
 import com.lorenzo.caltracker.data.db.entity.Food
+import com.lorenzo.caltracker.data.db.entity.GoalPeriod
 import com.lorenzo.caltracker.data.db.entity.Goals
 import com.lorenzo.caltracker.data.db.entity.LogEntry
 import com.lorenzo.caltracker.data.db.entity.Profile
@@ -22,4 +23,6 @@ data class Backup(
     val profile: Profile? = null,
     val goals: Goals? = null,
     val weightEntries: List<WeightEntry> = emptyList(),
+    /** Targets per day; empty in backups taken before 1.3.0. */
+    val goalHistory: List<GoalPeriod> = emptyList(),
 )
